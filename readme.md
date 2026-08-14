@@ -8,7 +8,7 @@ ServerlessWP 将 WordPress 放入 Serverless 函数中，将数据库放入一�
 
 随时关注 ServerlessWP 仓库的最新动态：[github.com/mitchmac/serverlesswp](https://github.com/mitchmac/serverlesswp)
 
-![WordPress 7.0.3](https://img.shields.io/badge/version-7.0.3-blue?logo=wordpress&labelColor=white&logoColor=black) ![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white)
+![WordPress 7.0.4](https://img.shields.io/badge/version-7.0.4-blue?logo=wordpress&labelColor=white&logoColor=black) ![PHP 8.3.33](https://img.shields.io/badge/version-8.3.33-blue?logo=php&labelColor=white)
 
 ## 适用场景
 
