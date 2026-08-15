@@ -9,6 +9,9 @@ cp ../wp/wp-config.php wordpress/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/simple-local-avatars-zh_CN.po wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/simple-local-avatars-zh_CN.mo wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/simple-local-avatars-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
@@ -40,6 +43,10 @@ mv asgaros-forum wordpress/wp-content/plugins/
 wget https://downloads.wordpress.org/plugin/integrate-umami.0.8.3.zip
 unzip integrate-umami.0.8.3.zip
 mv integrate-umami wordpress/wp-content/plugins/
+
+wget https://downloads.wordpress.org/plugin/simple-local-avatars.2.8.6.zip
+unzip simple-local-avatars.2.8.6.zip
+mv simple-local-avatars wordpress/wp-content/plugins/
 
 wget https://github.com/solstice23/argon-theme/releases/download/v1.3.5/argon.zip
 unzip argon.zip
