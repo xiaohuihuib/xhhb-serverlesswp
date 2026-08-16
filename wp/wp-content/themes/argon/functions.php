@@ -3171,6 +3171,28 @@ add_filter('pre_option_link_manager_enabled', '__return_true');
 function argon_login_page_style() {
 	wp_enqueue_style("argon_login_css", $GLOBALS['assets_path'] . "/login.css", null, $GLOBALS['theme_version']);
 }
+
 if (get_option('argon_enable_login_css') == 'true'){
 	add_action('login_head', 'argon_login_page_style');
+}
+if ( ! function_exists( 'get_cravatar_url' ) ) {
+    /**
+    *  把Gravatar头像服务替换为Cravatar
+    * @param string $url
+    * @return string
+    */
+    function get_cravatar_url( $url ) {
+        $sources = array(
+            'www.gravatar.com',
+            '0.gravatar.com',
+            '1.gravatar.com',
+            '2.gravatar.com',
+            'secure.gravatar.com',
+            'cn.gravatar.com'
+        );
+        return str_replace( $sources, 'cravatar.cn', $url );
+    }
+    add_filter( 'um_user_avatar_url_filter', 'get_cravatar_url', 1 );
+    add_filter( 'bp_gravatar_url', 'get_cravatar_url', 1 );
+    add_filter( 'get_avatar_url', 'get_cravatar_url', 1 );
 }
