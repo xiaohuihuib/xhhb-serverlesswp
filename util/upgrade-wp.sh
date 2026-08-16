@@ -42,6 +42,10 @@ wget https://downloads.wordpress.org/plugin/integrate-umami.0.8.3.zip
 unzip integrate-umami.0.8.3.zip
 mv integrate-umami wordpress/wp-content/plugins/
 
+wget https://downloads.wordpress.org/plugin/wp-useragent.zip
+unzip wp-useragent.zip
+mv wp-useragent wordpress/wp-content/plugins/
+
 wget https://github.com/solstice23/argon-theme/releases/download/v1.3.5/argon.zip
 unzip argon.zip
 mv argon wordpress/wp-content/themes/
