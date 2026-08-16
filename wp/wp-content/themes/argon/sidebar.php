@@ -288,3 +288,11 @@
 		echo '</aside>';
 	}
 ?>
+
+<div class="tab-pane fade text-center<?php if ($nowActiveTab == 1) { echo ' active show'; }?>" id="leftbar_tab_overview" role="tabpanel" aria-labelledby="leftbar_tab_overview_btn">
+	<a href="https://www.xiaohuihuib.dpdns.org/">
+<a/>
+
+<a href="https://www.xiaohuihuib.dpdns.org/">
+	<h6 id="leftbar_overview_author_name"><?php echo get_option('argon_sidebar_auther_name') == '' ? bloginfo('name') : get_option('argon_sidebar_auther_name'); ?> </h6>
+<a/>
