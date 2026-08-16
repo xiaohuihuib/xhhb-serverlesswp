@@ -9,7 +9,7 @@ cp ../wp/wp-config.php wordpress/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
-cp ../wp/wp-content/themes/argon/functions.php wordpress/wp-content/themes/argon/
+cp ../wp/wp-content/themes/argon/functions.php wordpress/wp-content/themes/
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
@@ -49,6 +49,8 @@ mv wp-useragent wordpress/wp-content/plugins/
 wget https://github.com/solstice23/argon-theme/releases/download/v1.3.5/argon.zip
 unzip argon.zip
 mv argon wordpress/wp-content/themes/
+
+cp ../wp/wp-content/themes/functions.php wordpress/wp-content/themes/argon/
 
 rm -rf ../wp
 mv wordpress ../wp
