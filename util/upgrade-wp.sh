@@ -9,6 +9,9 @@ cp ../wp/wp-config.php wordpress/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.po wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.mo wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
