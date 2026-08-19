@@ -48,6 +48,10 @@ wget https://downloads.wordpress.org/plugin/wordpress-importer.0.9.5.zip
 unzip wordpress-importer.0.9.5.zip
 mv wordpress-importer wordpress/wp-content/plugins/
 
+wget https://downloads.wordpress.org/plugin/default-admin-color-scheme.1.0.3.zip
+unzip default-admin-color-scheme.1.0.3.zip
+mv default-admin-color-scheme wordpress/wp-content/plugins/
+
 wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
 unzip argon.zip
 mv argon wordpress/wp-content/themes/
