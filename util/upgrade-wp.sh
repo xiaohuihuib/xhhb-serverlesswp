@@ -12,6 +12,14 @@ cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.po wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.mo wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-0d455069dd479112c75ad60d5dfe35da.json wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-3a5c971b121f299b74a6c03ec10dfde1.json wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-9f22b9f504df7b65b96763ff03cb4cde.json wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-60cecc84730292c14de6fa6a684fa5a2.json wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-925338e6c068b12411f2a3e130f029b4.json wordpress/wp-content/languages/plugins/
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
@@ -59,6 +67,10 @@ mv ai wordpress/wp-content/plugins/
 wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
+
+wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
+unzip wordfence.9.0.0.zip
+mv wordfence wordpress/wp-content/plugins/
 
 wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
 unzip argon.zip
