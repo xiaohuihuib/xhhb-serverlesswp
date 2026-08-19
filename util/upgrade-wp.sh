@@ -52,6 +52,14 @@ wget https://downloads.wordpress.org/plugin/default-admin-color-scheme.1.0.3.zip
 unzip default-admin-color-scheme.1.0.3.zip
 mv default-admin-color-scheme wordpress/wp-content/plugins/
 
+wget https://downloads.wordpress.org/plugin/ai.1.3.0.zip
+unzip ai.1.3.0.zip
+mv ai wordpress/wp-content/plugins/
+
+wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
+unzip ai-provider-for-cloudflare.1.0.0.zip
+mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
+
 wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
 unzip argon.zip
 mv argon wordpress/wp-content/themes/
