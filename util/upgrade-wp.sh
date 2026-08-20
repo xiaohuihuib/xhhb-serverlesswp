@@ -6,6 +6,7 @@ cd temp
 
 wget https://cn.wordpress.org/latest-zh_CN.zip
 unzip latest-zh_CN.zip
+
 cp ../wp/wp-config.php wordpress/
 
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
@@ -37,6 +38,10 @@ rm -rf sqlite-database-integration
 wget https://downloads.wordpress.org/plugin/tidb-compatibility.zip
 unzip tidb-compatibility
 mv tidb-compatibility wordpress/wp-content/plugins/
+
+wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
+unzip argon.zip
+mv argon wordpress/wp-content/themes/
 
 rm -rf wordpress/wp-content/plugins/hello.php
 rm -rf wordpress/wp-content/themes/twentytwentytwo wordpress/wp-content/themes/twentytwentyone
@@ -75,17 +80,9 @@ wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
 
-wget https://downloads.wordpress.org/plugin/bing-webmaster-tools.zip
-unzip bing-webmaster-tools.zip
-mv bing-webmaster-tools wordpress/wp-content/plugins/
-
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
 mv wordfence wordpress/wp-content/plugins/
-
-wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
-unzip argon.zip
-mv argon wordpress/wp-content/themes/
 
 rm -rf ../wp
 mv wordpress ../wp
