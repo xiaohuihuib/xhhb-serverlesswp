@@ -75,9 +75,9 @@ wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
 
-wget https://downloads.wordpress.org/plugin/indexnow.zip
-unzip indexnow.zip
-mv indexnow wordpress/wp-content/plugins/
+wget https://downloads.wordpress.org/plugin/bing-webmaster-tools.zip
+unzip bing-webmaster-tools.zip
+mv bing-webmaster-tools wordpress/wp-content/plugins/
 
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
