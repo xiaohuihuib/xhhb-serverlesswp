@@ -7,7 +7,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: GlotPress/4.0.3\n"
+"X-Generator: GlotPress/4.1.0\n"
 "Language: zh_CN\n"
 "Project-Id-Version: Themes - Twenty Twenty-Four\n"
 
@@ -58,7 +58,7 @@ msgctxt "Pattern description"
 msgid "A feature grid of 2 rows and 3 columns with headings and text."
 msgstr "2 行 3 列的功能网格，包含标题和文本。"
 
-#: patterns/text-faq.php:35
+#: patterns/text-faq.php:40
 msgctxt "Question in the FAQ pattern"
 msgid "Who is behind Études?"
 msgstr "谁是 Études 的幕后推手？"
@@ -218,39 +218,39 @@ msgctxt "Pattern description"
 msgid "A title, paragraph, two CTA buttons, and an image for a general CTA section."
 msgstr "标题、段落、两个 CTA 按钮和一张图片，用于一般 CTA 部分。"
 
-#: patterns/footer.php:74
+#: patterns/footer.php:79
 msgid "Contact Us"
 msgstr "联系我们"
 
-#: patterns/footer.php:73
+#: patterns/footer.php:78
 msgid "Terms and Conditions"
 msgstr "条款"
 
-#: patterns/footer.php:72
+#: patterns/footer.php:77
 msgid "Privacy Policy"
 msgstr "隐私政策"
 
-#: patterns/footer.php:51
+#: patterns/footer.php:56
 msgid "Careers"
 msgstr "职业"
 
-#: patterns/footer.php:50
+#: patterns/footer.php:55
 msgid "History"
 msgstr "历史"
 
-#: patterns/footer.php:49
+#: patterns/footer.php:54
 msgid "Team"
 msgstr "团队"
 
-#: patterns/footer.php:96
+#: patterns/footer.php:101
 msgid "Twitter/X"
 msgstr "Twitter / X"
 
-#: functions.php:188
+#: functions.php:189
 msgid "A collection of full page layouts."
 msgstr "全部页面布局集合"
 
-#: functions.php:187
+#: functions.php:188
 msgctxt "Block pattern category"
 msgid "Pages"
 msgstr "页面"
@@ -260,14 +260,14 @@ msgctxt "Pattern title"
 msgid "List of posts without images, 1 column"
 msgstr "无图像的文章列表，1 栏"
 
-#: patterns/hidden-portfolio-hero.php:16
+#: patterns/hidden-portfolio-hero.php:21
 msgid "I’m <em>Leia Acosta</em>, a passionate photographer who finds inspiration in capturing the fleeting beauty of life."
 msgstr "我是<em>莱亚</em>，一位充满热情的摄影师，从捕捉转瞬即逝的生命之美中寻找灵感。"
 
 #. Author URI of the theme
 #. Translators: WordPress link.
-#: style.css patterns/footer-centered-logo-nav.php:22
-#: patterns/footer-colophon-3-col.php:91 patterns/footer.php:117
+#: style.css patterns/footer-centered-logo-nav.php:27
+#: patterns/footer-colophon-3-col.php:96 patterns/footer.php:122
 msgid "https://wordpress.org"
 msgstr "https://cn.wordpress.org"
 
@@ -463,106 +463,106 @@ msgctxt "Gradient name"
 msgid "Vertical transparent rust to beige"
 msgstr "垂直透明锈色至米色"
 
-#: patterns/footer-colophon-3-col.php:82
+#: patterns/footer-colophon-3-col.php:87
 msgid "&copy;"
 msgstr "&copy;"
 
-#: patterns/cta-rsvp.php:50 patterns/text-title-left-image-right.php:51
+#: patterns/cta-rsvp.php:55 patterns/text-title-left-image-right.php:56
 msgid "A ramp along a curved wall in the Kiasma Museu, Helsinki, Finland"
 msgstr "沿着芬兰赫尔辛基基阿斯玛博物馆（Kiasma Museu）弧形墙壁的斜坡"
 
-#: patterns/footer.php:41 patterns/footer.php:47
+#: patterns/footer.php:46 patterns/footer.php:52
 msgid "About"
 msgstr "关于"
 
-#: patterns/hidden-sidebar.php:17
+#: patterns/hidden-sidebar.php:23
 msgid "About the author"
 msgstr "关于作者"
 
-#: patterns/gallery-project-layout.php:21
+#: patterns/gallery-project-layout.php:26
 msgid "An empty staircase under an angular roof in Darling Harbour, Sydney, Australia"
 msgstr "澳大利亚悉尼达令港角形屋顶下的空楼梯"
 
-#: functions.php:24
+#: functions.php:25
 msgid "Arrow icon"
 msgstr "箭头图标"
 
-#: patterns/gallery-project-layout.php:54
+#: patterns/gallery-project-layout.php:59
 msgid "Art Gallery of Ontario, Toronto, Canada"
 msgstr "加拿大多伦多安大略美术馆"
 
-#: patterns/banner-hero.php:52
+#: patterns/banner-hero.php:57
 msgid "Building exterior in Toronto, Canada"
 msgstr "加拿大多伦多建筑外观"
 
-#: patterns/cta-pricing.php:87
+#: patterns/cta-pricing.php:92
 msgctxt "Button text for the first pricing level"
 msgid "Subscribe"
 msgstr "订阅"
 
-#: patterns/cta-pricing.php:145
+#: patterns/cta-pricing.php:150
 msgctxt "Button text for the second pricing level"
 msgid "Subscribe"
 msgstr "订阅"
 
-#: patterns/cta-pricing.php:203
+#: patterns/cta-pricing.php:208
 msgctxt "Button text for the third pricing level"
 msgid "Subscribe"
 msgstr "订阅"
 
-#: patterns/banner-hero.php:37
+#: patterns/banner-hero.php:42
 msgctxt "Button text of the hero section"
 msgid "About us"
 msgstr "关于我们"
 
-#: patterns/cta-content-image-on-right.php:47
+#: patterns/cta-content-image-on-right.php:52
 msgctxt "Button text of this section"
 msgid "How it works"
 msgstr "它是如何工作的"
 
-#: patterns/text-title-left-image-right.php:35
+#: patterns/text-title-left-image-right.php:40
 msgctxt "Call to Action button text"
 msgid "About us"
 msgstr "关于我们"
 
-#: patterns/cta-rsvp.php:34 patterns/page-rsvp-landing.php:34
+#: patterns/cta-rsvp.php:39 patterns/page-rsvp-landing.php:39
 msgctxt "Call to action button text for the reservation button"
 msgid "Reserve your spot"
 msgstr "预订您的位置"
 
-#: functions.php:70
+#: functions.php:71
 msgid "Checkmark"
 msgstr "复选标记"
 
-#: patterns/hidden-comments.php:12
+#: patterns/hidden-comments.php:17
 msgid "Comments"
 msgstr "评论"
 
-#: patterns/footer-colophon-3-col.php:39
+#: patterns/footer-colophon-3-col.php:44
 msgid "Contact"
 msgstr "联系"
 
-#: patterns/banner-hero.php:26
+#: patterns/banner-hero.php:31
 msgctxt "Content of the hero section"
 msgid "Études is a pioneering firm that seamlessly merges creativity and functionality to redefine architectural excellence."
 msgstr "Études 是一家将创意与功能完美融合，重新定义卓越建筑的先锋公司。"
 
-#: patterns/text-title-left-image-right.php:28
+#: patterns/text-title-left-image-right.php:33
 msgctxt "Description for the About pattern"
 msgid "Leaving an indelible mark on the landscape of tomorrow."
 msgstr "为明天的景观留下不可磨灭的印记。"
 
-#: patterns/text-project-details.php:35 patterns/text-project-details.php:43
+#: patterns/text-project-details.php:40 patterns/text-project-details.php:48
 msgctxt "Descriptive text for the feature area"
 msgid "The revitalized Art Gallery is set to redefine the cultural landscape of Toronto, serving as a nexus of artistic expression, community engagement, and architectural marvel. The expansion and renovation project pay homage to the Art Gallery's rich history while embracing the future, ensuring that the gallery remains a beacon of inspiration."
 msgstr "焕然一新的艺术馆将重新定义多伦多的文化景观，成为艺术表达、社区参与和建筑奇迹的中心。扩建和翻新项目在向艺术馆的悠久历史致敬的同时，也将拥抱未来，确保艺术馆继续成为灵感的灯塔。"
 
-#: patterns/text-project-details.php:27
+#: patterns/text-project-details.php:32
 msgctxt "Descriptive title for the feature area"
 msgid "With meticulous attention to detail and a commitment to excellence, we create spaces that inspire, elevate, and enrich the lives of those who inhabit them."
 msgstr "凭借对细节的一丝不苟和精益求精的承诺，我们创造的空间能够激发、提升和丰富居住者的生活。"
 
-#: patterns/testimonial-centered.php:39
+#: patterns/testimonial-centered.php:44
 msgctxt "Designation of Person Provided Testimonial"
 msgid "CEO, Greenprint"
 msgstr "绿色足迹首席执行官"
@@ -597,51 +597,51 @@ msgctxt "Duotone name"
 msgid "Orange and white"
 msgstr "橙色和白色"
 
-#: patterns/footer-colophon-3-col.php:42
+#: patterns/footer-colophon-3-col.php:47
 msgctxt "Example email in site footer"
 msgid "info@example.com"
 msgstr "info@example.com"
 
-#: patterns/footer-colophon-3-col.php:60 patterns/footer.php:94
+#: patterns/footer-colophon-3-col.php:65 patterns/footer.php:99
 msgid "Facebook"
 msgstr "Facebook"
 
-#: patterns/cta-pricing.php:115
+#: patterns/cta-pricing.php:120
 msgctxt "Feature for pricing level"
 msgid "Access to 20 exclusive <em>Études Articles</em> per month."
 msgstr "每月获取 20 篇独家 Études<em>文章</em>。"
 
-#: patterns/cta-pricing.php:53
+#: patterns/cta-pricing.php:58
 msgctxt "Feature for pricing level"
 msgid "Access to 5 exclusive <em>Études Articles</em> per month."
 msgstr "每月获取 5 篇独家 Études<em>文章</em>。"
 
-#: patterns/cta-pricing.php:189
+#: patterns/cta-pricing.php:194
 msgctxt "Feature for pricing level"
 msgid "Exclusive access to the <em>Études</em> app for iOS and Android"
 msgstr "独家使用 iOS 和 Android 版<em>Études</em>应用程序"
 
-#: patterns/cta-pricing.php:72 patterns/cta-pricing.php:131
+#: patterns/cta-pricing.php:77 patterns/cta-pricing.php:136
 msgctxt "Feature for pricing level"
 msgid "Exclusive access to the <em>Études</em> app for iOS and Android."
 msgstr "独家使用 iOS 和 Android 版<em>Études</em>应用程序。"
 
-#: patterns/cta-pricing.php:173
+#: patterns/cta-pricing.php:178
 msgctxt "Feature for pricing level"
 msgid "Exclusive, unlimited access to <em>Études Articles</em>."
 msgstr "独家无限制访问 Études<em>文章</em>。"
 
-#: patterns/cta-pricing.php:62 patterns/cta-pricing.php:123
-#: patterns/cta-pricing.php:181
+#: patterns/cta-pricing.php:67 patterns/cta-pricing.php:128
+#: patterns/cta-pricing.php:186
 msgctxt "Feature for pricing level"
 msgid "Weekly print edition."
 msgstr "每周印刷版。"
 
-#: patterns/hidden-sidebar.php:60
+#: patterns/hidden-sidebar.php:66
 msgid "Financial apps for families"
 msgstr "家庭财务应用程序"
 
-#: patterns/footer-colophon-3-col.php:57
+#: patterns/footer-colophon-3-col.php:62
 msgid "Follow"
 msgstr "关注"
 
@@ -825,116 +825,116 @@ msgctxt "Gradient name"
 msgid "Vertical taupe to beige"
 msgstr "垂直灰褐色至米色"
 
-#: patterns/page-rsvp-landing.php:49
+#: patterns/page-rsvp-landing.php:54
 msgid "Green staircase at Western University, London, Canada"
 msgstr "加拿大伦敦西部大学的绿色楼梯"
 
-#: patterns/hidden-404.php:10
+#: patterns/hidden-404.php:15
 msgctxt "Heading for a webpage that is not found"
 msgid "Page Not Found"
 msgstr "找不到网页"
 
-#: patterns/text-faq.php:15
+#: patterns/text-faq.php:20
 msgctxt "Heading of the FAQs"
 msgid "FAQs"
 msgstr "常见问题"
 
-#: patterns/text-feature-grid-3-col.php:16
+#: patterns/text-feature-grid-3-col.php:21
 msgctxt "Heading of the features"
 msgid "A passion for creating spaces"
 msgstr "创造空间的热情"
 
-#: patterns/banner-hero.php:18
+#: patterns/banner-hero.php:23
 msgctxt "Heading of the hero section"
 msgid "A commitment to innovation and sustainability"
 msgstr "致力于创新和可持续发展"
 
-#: patterns/text-title-left-image-right.php:21
+#: patterns/text-title-left-image-right.php:26
 msgctxt "Headline for the About pattern"
 msgid "Études offers comprehensive consulting, management, design, and research solutions. Every architectural endeavor is an opportunity to shape the future."
 msgstr "Études 提供全面的咨询、管理、设计和研究解决方案。每一项建筑工作都是塑造未来的机会。"
 
-#: patterns/banner-project-description.php:41
+#: patterns/banner-project-description.php:47
 msgid "Hyatt Regency San Francisco, San Francisco, United States"
 msgstr "美国旧金山凯悦酒店"
 
 #. Translators: About text placeholder
-#: patterns/text-centered-statement-small.php:23
+#: patterns/text-centered-statement-small.php:28
 msgid "I write about finance, management and economy, my book “%1$s” is out now."
 msgstr "我的著作《%1$s》已经出版。"
 
-#: patterns/cta-rsvp.php:21 patterns/page-rsvp-landing.php:23
+#: patterns/cta-rsvp.php:26 patterns/page-rsvp-landing.php:28
 msgctxt "Initials for ´please respond´"
 msgid "RSVP"
 msgstr "敬请回复"
 
-#: patterns/footer-colophon-3-col.php:60 patterns/footer.php:95
+#: patterns/footer-colophon-3-col.php:65 patterns/footer.php:100
 msgid "Instagram"
 msgstr "Instagram"
 
-#: patterns/footer-colophon-3-col.php:30
+#: patterns/footer-colophon-3-col.php:35
 msgid "Keep up, get in touch."
 msgstr "保持联系。"
 
-#: patterns/hidden-post-navigation.php:11
+#: patterns/hidden-post-navigation.php:16
 msgctxt "Label before the title of the previous post. There is a space after the colon."
 msgid "Previous: "
 msgstr "之前： "
 
-#: patterns/hidden-sidebar.php:59
+#: patterns/hidden-sidebar.php:65
 msgid "Latest inflation report"
 msgstr "最新通胀报告"
 
-#: patterns/hidden-sidebar.php:53
+#: patterns/hidden-sidebar.php:59
 msgid "Links I found useful and wanted to share."
 msgstr "我发现了一些有用的链接，希望与大家分享。"
 
-#: patterns/hidden-no-results.php:9
+#: patterns/hidden-no-results.php:15
 msgctxt "Message explaining that there are no results returned from a search"
 msgid "No posts were found."
 msgstr "没有被发现的文章。"
 
-#: patterns/hidden-404.php:13
+#: patterns/hidden-404.php:18
 msgctxt "Message to convey that a webpage could not be found"
 msgid "The page you are looking for does not exist, or it has been moved. Please try searching using the form below."
 msgstr "您要查找的页面不存在，或已被移动。请尝试使用下面的表格进行搜索。"
 
 #. Translators: About link placeholder
-#: patterns/text-centered-statement-small.php:20
+#: patterns/text-centered-statement-small.php:25
 msgid "Money Studies"
 msgstr "货币研究"
 
-#: patterns/cta-pricing.php:11
+#: patterns/cta-pricing.php:16
 msgctxt "Name for the pricing pattern"
 msgid "Pricing Table"
 msgstr "定价表"
 
-#: patterns/testimonial-centered.php:35
+#: patterns/testimonial-centered.php:40
 msgctxt "Name of Person Provided the Testimonial"
 msgid "Annie Steiner"
 msgstr "安妮-斯坦纳"
 
-#: patterns/page-rsvp-landing.php:14
+#: patterns/page-rsvp-landing.php:19
 msgctxt "Name of RSVP landing page pattern"
 msgid "RSVP Landing Page"
 msgstr "注册页面"
 
-#: patterns/cta-rsvp.php:11
+#: patterns/cta-rsvp.php:16
 msgctxt "Name of RSVP pattern"
 msgid "RSVP"
 msgstr "敬请回复"
 
-#: patterns/team-4-col.php:11
+#: patterns/team-4-col.php:16
 msgctxt "Name of team pattern"
 msgid "Team members"
 msgstr "团队成员"
 
-#: patterns/testimonial-centered.php:26
+#: patterns/testimonial-centered.php:31
 msgctxt "Name of testimonial citation group"
 msgid "Testimonial source"
 msgstr "推荐信来源"
 
-#: patterns/text-faq.php:12
+#: patterns/text-faq.php:17
 msgctxt "Name of the FAQ pattern"
 msgid "FAQs"
 msgstr "常见问题"
@@ -1179,261 +1179,261 @@ msgctxt "Pattern title"
 msgid "Title text and button on left with image on right"
 msgstr "标题文字和按钮在左侧，图片在右侧"
 
-#: functions.php:47
+#: functions.php:48
 msgid "Pill"
 msgstr "椭圆"
 
-#: patterns/hidden-sidebar.php:33
+#: patterns/hidden-sidebar.php:39
 msgid "Popular Categories"
 msgstr "热门分类"
 
-#: patterns/hidden-post-navigation.php:9 patterns/hidden-post-navigation.php:10
-#: patterns/hidden-posts-heading.php:10
-#: patterns/template-index-portfolio.php:16
+#: patterns/hidden-post-navigation.php:14
+#: patterns/hidden-post-navigation.php:15 patterns/hidden-posts-heading.php:16
+#: patterns/template-index-portfolio.php:21
 msgid "Posts"
 msgstr "文章"
 
-#: patterns/hidden-post-meta.php:20
+#: patterns/hidden-post-meta.php:25
 msgctxt "Prefix for the post author block: By author name"
 msgid "by"
 msgstr "由"
 
-#: patterns/footer.php:64 patterns/footer.php:70
+#: patterns/footer.php:69 patterns/footer.php:75
 msgid "Privacy"
 msgstr "隐私"
 
-#: patterns/cta-rsvp.php:27 patterns/page-rsvp-landing.php:28
+#: patterns/cta-rsvp.php:32 patterns/page-rsvp-landing.php:33
 msgctxt "RSVP call to action description"
 msgid "Experience the fusion of imagination and expertise with Études Arch Summit, February 2025."
 msgstr "2025 年 2 月，Études Arch 峰会让您体验想象力与专业知识的融合。"
 
-#: patterns/cta-services-image-left.php:39
+#: patterns/cta-services-image-left.php:44
 msgctxt "Sample button text to view the services"
 msgid "Our services"
 msgstr "我们的服务"
 
-#: patterns/page-newsletter-landing.php:40
+#: patterns/page-newsletter-landing.php:45
 msgctxt "Sample content for newsletter subscribe button"
 msgid "Sign up"
 msgstr "注册"
 
-#: patterns/cta-pricing.php:22
+#: patterns/cta-pricing.php:27
 msgctxt "Sample description for a pricing table"
 msgid "We offer flexible options, which you can adapt to the different needs of each project."
 msgstr "我们提供灵活的选择，您可以根据每个项目的不同需求进行调整。"
 
-#: patterns/banner-project-description.php:26
+#: patterns/banner-project-description.php:32
 msgctxt "Sample descriptive text for a project or post."
 msgid "This transformative project seeks to enhance the gallery's infrastructure, accessibility, and exhibition spaces while preserving its rich cultural heritage."
 msgstr "这一改造项目旨在加强画廊的基础设施、无障碍设施和展览空间，同时保护其丰富的文化遗产。"
 
-#: patterns/team-4-col.php:20
+#: patterns/team-4-col.php:25
 msgctxt "Sample descriptive text of the team pattern"
 msgid "Our comprehensive suite of professionals caters to a diverse team, ranging from seasoned architects to renowned engineers."
 msgstr "从经验丰富的建筑师到闻名遐迩的工程师，我们全面的专业人员组合满足了不同团队的需求。"
 
-#: patterns/text-feature-grid-3-col.php:63
+#: patterns/text-feature-grid-3-col.php:68
 msgctxt "Sample feature heading"
 msgid "App Access"
 msgstr "应用程序访问"
 
-#: patterns/text-feature-grid-3-col.php:84
+#: patterns/text-feature-grid-3-col.php:89
 msgctxt "Sample feature heading"
 msgid "Consulting"
 msgstr "咨询"
 
-#: patterns/text-feature-grid-3-col.php:51
+#: patterns/text-feature-grid-3-col.php:56
 msgctxt "Sample feature heading"
 msgid "Continuous Support"
 msgstr "持续支持"
 
-#: patterns/text-feature-grid-3-col.php:96
+#: patterns/text-feature-grid-3-col.php:101
 msgctxt "Sample feature heading"
 msgid "Project Management"
 msgstr "项目管理"
 
-#: patterns/text-feature-grid-3-col.php:39
+#: patterns/text-feature-grid-3-col.php:44
 msgctxt "Sample feature heading"
 msgid "Renovation and restoration"
 msgstr "翻新和修复"
 
-#: patterns/text-feature-grid-3-col.php:108
+#: patterns/text-feature-grid-3-col.php:113
 msgctxt "Sample heading"
 msgid "Architectural Solutions"
 msgstr "建筑解决方案"
 
-#: patterns/cta-content-image-on-right.php:18
+#: patterns/cta-content-image-on-right.php:23
 msgctxt "Sample heading"
 msgid "Enhance your architectural journey with the Études Architect app."
 msgstr "使用 Études Architect 应用程序增强您的建筑之旅。"
 
-#: patterns/text-alternating-images.php:91
+#: patterns/text-alternating-images.php:96
 msgctxt "Sample heading"
 msgid "Études Newsletter"
 msgstr "研究通讯"
 
-#: patterns/text-alternating-images.php:19
+#: patterns/text-alternating-images.php:24
 msgctxt "Sample heading content"
 msgid "An array of resources"
 msgstr "一系列资源"
 
-#: patterns/cta-pricing.php:18
+#: patterns/cta-pricing.php:23
 msgctxt "Sample heading for pricing pattern"
 msgid "Our Services"
 msgstr "我们的服务"
 
-#: patterns/cta-pricing.php:37
+#: patterns/cta-pricing.php:42
 msgctxt "Sample heading for the first pricing level"
 msgid "Free"
 msgstr "免费"
 
-#: patterns/cta-pricing.php:99
+#: patterns/cta-pricing.php:104
 msgctxt "Sample heading for the second pricing level"
 msgid "Connoisseur"
 msgstr "鉴赏家"
 
-#: patterns/team-4-col.php:16
+#: patterns/team-4-col.php:21
 msgctxt "Sample heading for the team pattern"
 msgid "Meet our team"
 msgstr "认识我们的团队"
 
-#: patterns/cta-pricing.php:157
+#: patterns/cta-pricing.php:162
 msgctxt "Sample heading for the third pricing level"
 msgid "Expert"
 msgstr "专家"
 
-#: patterns/cta-services-image-left.php:28
+#: patterns/cta-services-image-left.php:33
 msgctxt "Sample heading of the services pattern"
 msgid "Guiding your business through the project"
 msgstr "指导企业完成项目"
 
-#: patterns/text-alternating-images.php:37
+#: patterns/text-alternating-images.php:42
 msgctxt "Sample list heading"
 msgid "Études Architect App"
 msgstr "建筑设计应用程序"
 
-#: patterns/text-alternating-images.php:97
+#: patterns/text-alternating-images.php:102
 msgctxt "Sample list item"
 msgid "A world of thought-provoking articles."
 msgstr "一个发人深省的文章世界。"
 
-#: patterns/text-alternating-images.php:101
+#: patterns/text-alternating-images.php:106
 msgctxt "Sample list item"
 msgid "Case studies that celebrate architecture."
 msgstr "赞美建筑的案例研究。"
 
-#: patterns/cta-content-image-on-right.php:24
-#: patterns/text-alternating-images.php:44
+#: patterns/cta-content-image-on-right.php:29
+#: patterns/text-alternating-images.php:49
 msgctxt "Sample list item"
 msgid "Collaborate with fellow architects."
 msgstr "与建筑师同行合作。"
 
-#: patterns/text-alternating-images.php:105
+#: patterns/text-alternating-images.php:110
 msgctxt "Sample list item"
 msgid "Exclusive access to design insights."
 msgstr "独享设计见解。"
 
-#: patterns/cta-content-image-on-right.php:32
-#: patterns/text-alternating-images.php:52
+#: patterns/cta-content-image-on-right.php:37
+#: patterns/text-alternating-images.php:57
 msgctxt "Sample list item"
 msgid "Experience the world of architecture."
 msgstr "体验建筑世界。"
 
-#: patterns/cta-content-image-on-right.php:28
-#: patterns/text-alternating-images.php:48
+#: patterns/cta-content-image-on-right.php:33
+#: patterns/text-alternating-images.php:53
 msgctxt "Sample list item"
 msgid "Showcase your projects."
 msgstr "展示您的项目。"
 
-#: patterns/team-4-col.php:44
+#: patterns/team-4-col.php:49
 msgctxt "Sample name of a team member"
 msgid "Francesca Piovani"
 msgstr "弗朗西斯卡-皮奥瓦尼"
 
-#: patterns/team-4-col.php:92
+#: patterns/team-4-col.php:97
 msgctxt "Sample name of a team member"
 msgid "Helga Steiner"
 msgstr "Helga Steiner"
 
-#: patterns/team-4-col.php:116
+#: patterns/team-4-col.php:121
 msgctxt "Sample name of a team member"
 msgid "Ivan Lawrence"
 msgstr "伊万-劳伦斯"
 
-#: patterns/team-4-col.php:68
+#: patterns/team-4-col.php:73
 msgctxt "Sample name of a team member"
 msgid "Rhye Moore"
 msgstr "雷耶-摩尔"
 
-#: patterns/cta-pricing.php:42
+#: patterns/cta-pricing.php:47
 msgctxt "Sample price for the first pricing level"
 msgid "$0"
 msgstr "$0"
 
-#: patterns/cta-pricing.php:104
+#: patterns/cta-pricing.php:109
 msgctxt "Sample price for the second pricing level"
 msgid "$12"
 msgstr "$12"
 
-#: patterns/cta-pricing.php:162
+#: patterns/cta-pricing.php:167
 msgctxt "Sample price for the third pricing level"
 msgid "$28"
 msgstr "$28"
 
-#: patterns/team-4-col.php:97
+#: patterns/team-4-col.php:102
 msgctxt "Sample role of a team member"
 msgid "Architect"
 msgstr "建筑师"
 
-#: patterns/team-4-col.php:73
+#: patterns/team-4-col.php:78
 msgctxt "Sample role of a team member"
 msgid "Engineering Manager"
 msgstr "工程经理"
 
-#: patterns/team-4-col.php:49
+#: patterns/team-4-col.php:54
 msgctxt "Sample role of a team member"
 msgid "Founder, CEO & Architect"
 msgstr "创始人、首席执行官兼建筑师"
 
-#: patterns/team-4-col.php:121
+#: patterns/team-4-col.php:126
 msgctxt "Sample role of a team member"
 msgid "Project Manager"
 msgstr "项目经理"
 
-#: patterns/text-alternating-images.php:23
+#: patterns/text-alternating-images.php:28
 msgctxt "Sample subheading content"
 msgid "Our comprehensive suite of professional services caters to a diverse clientele, ranging from homeowners to commercial developers."
 msgstr "我们的专业服务包罗万象，可满足从业主到商业开发商等不同客户的需求。"
 
-#: patterns/cta-subscribe-centered.php:31
+#: patterns/cta-subscribe-centered.php:36
 msgctxt "Sample text for Sign Up Button"
 msgid "Sign up"
 msgstr "注册"
 
-#: patterns/cta-subscribe-centered.php:24
+#: patterns/cta-subscribe-centered.php:29
 msgctxt "Sample text for Subscriber Description"
 msgid "Stay in the loop with everything you need to know."
 msgstr "了解您需要知道的一切。"
 
-#: patterns/cta-subscribe-centered.php:20
+#: patterns/cta-subscribe-centered.php:25
 msgctxt "Sample text for Subscriber Heading with numbers"
 msgid "Join 900+ subscribers"
 msgstr "加入 900 多名订阅者的行列"
 
-#: patterns/banner-project-description.php:17
+#: patterns/banner-project-description.php:23
 msgctxt "Sample title for a project or post"
 msgid "Art Gallery — Overview"
 msgstr "艺术画廊 - 概述"
 
-#: patterns/hidden-sidebar.php:72
+#: patterns/hidden-sidebar.php:78
 msgid "Search the website"
 msgstr "搜索本站"
 
-#: patterns/footer.php:86
+#: patterns/footer.php:91
 msgid "Social"
 msgstr "社交"
 
-#: patterns/footer.php:92
+#: patterns/footer.php:97
 msgid "Social Media"
 msgstr "社交媒体"
 
@@ -1467,73 +1467,73 @@ msgctxt "Style variation name"
 msgid "Rust"
 msgstr "生锈"
 
-#: patterns/text-feature-grid-3-col.php:24
+#: patterns/text-feature-grid-3-col.php:29
 msgctxt "Sub-heading of the features"
 msgid "Our comprehensive suite of professional services caters to a diverse clientele, ranging from homeowners to commercial developers."
 msgstr "我们的专业服务包罗万象，可满足从业主到商业开发商等不同客户的需求。"
 
-#: patterns/text-project-details.php:18
+#: patterns/text-project-details.php:23
 msgctxt "Title text for the feature area"
 msgid "The revitalized art gallery is set to redefine cultural landscape."
 msgstr "焕然一新的艺术馆将重新定义文化景观。"
 
-#: patterns/text-alternating-images.php:64
+#: patterns/text-alternating-images.php:69
 msgid "Tourist taking photo of a building"
 msgstr "游客在建筑前拍照"
 
-#: patterns/hidden-sidebar.php:49
+#: patterns/hidden-sidebar.php:55
 msgid "Useful Links"
 msgstr "有用的链接"
 
-#: patterns/posts-grid-2-col.php:14 patterns/posts-list.php:14
-#: patterns/template-index-blogging.php:16
+#: patterns/posts-grid-2-col.php:19 patterns/posts-list.php:19
+#: patterns/template-index-blogging.php:21
 msgid "Watch, Read, Listen"
 msgstr "观看、阅读、聆听"
 
-#: patterns/cta-content-image-on-right.php:59
-#: patterns/cta-services-image-left.php:19
+#: patterns/cta-content-image-on-right.php:64
+#: patterns/cta-services-image-left.php:24
 msgid "White abstract geometric artwork from Dresden, Germany"
 msgstr "来自德国德累斯顿的白色抽象几何艺术品"
 
-#: patterns/text-alternating-images.php:82
+#: patterns/text-alternating-images.php:87
 msgid "Windows of a building in Nuremberg, Germany"
 msgstr "德国纽伦堡一座建筑的窗户"
 
-#: functions.php:89
+#: functions.php:90
 msgid "With arrow"
 msgstr "带箭头"
 
-#: functions.php:107
+#: functions.php:108
 msgid "With asterisk"
 msgstr "带星号"
 
-#: patterns/page-newsletter-landing.php:29
+#: patterns/page-newsletter-landing.php:34
 msgctxt "sample content for newsletter subscription"
 msgid "Subscribe to the newsletter and stay connected with our community"
 msgstr "订阅时事通讯，与我们的社区保持联系"
 
-#: patterns/hidden-search.php:9
+#: patterns/hidden-search.php:14
 msgctxt "search button text"
 msgid "Search"
 msgstr "搜索"
 
-#: patterns/hidden-search.php:9 patterns/hidden-sidebar.php:75
+#: patterns/hidden-search.php:14 patterns/hidden-sidebar.php:81
 msgctxt "search form label"
 msgid "Search"
 msgstr "搜索"
 
-#: patterns/hidden-sidebar.php:75
+#: patterns/hidden-sidebar.php:81
 msgctxt "search form placeholder"
 msgid "Search..."
 msgstr "搜索..."
 
 #. Translators: Designed with WordPress
-#: patterns/footer-centered-logo-nav.php:25
-#: patterns/footer-colophon-3-col.php:94 patterns/footer.php:120
+#: patterns/footer-centered-logo-nav.php:30
+#: patterns/footer-colophon-3-col.php:99 patterns/footer.php:125
 msgid "Designed with %1$s"
 msgstr "用 %1$s 设计"
 
-#: patterns/hidden-post-meta.php:25
+#: patterns/hidden-post-meta.php:30
 msgctxt "Prefix for the post category block: in category name"
 msgid "in "
 msgstr "于 "
@@ -1578,7 +1578,7 @@ msgctxt "Pattern title"
 msgid "Portfolio home image gallery"
 msgstr "作品集首页图库"
 
-#: patterns/text-centered-statement.php:21
+#: patterns/text-centered-statement.php:26
 msgid "<em>Études</em> is not confined to the past—we are passionate about the cutting edge designs shaping our world today."
 msgstr "<em>Études</em>不拘泥于过往，而是全情投入塑造当今的顶尖设计。"
 
@@ -1597,28 +1597,28 @@ msgctxt "Custom template name"
 msgid "Page with Wide Image"
 msgstr "带宽幅图像的页面"
 
-#: patterns/text-faq.php:27 patterns/text-faq.php:38 patterns/text-faq.php:49
-#: patterns/text-faq.php:60
+#: patterns/text-faq.php:32 patterns/text-faq.php:43 patterns/text-faq.php:54
+#: patterns/text-faq.php:65
 msgctxt "Answer in the FAQ pattern"
 msgid "Études offers comprehensive consulting, management, design, and research solutions. Our vision is to be at the forefront of architectural innovation, fostering a global community of architects and enthusiasts united by a passion for creating spaces. Every architectural endeavor is an opportunity to shape the future."
 msgstr "Études 提供全面的咨询、管理、设计和研究解决方案。我们的愿景是站在建筑创新的最前沿，培养一个由建筑师和爱好者组成的全球社区，将他们对创造空间的热情凝聚在一起。每一项建筑工作都是塑造未来的机会。"
 
-#: patterns/testimonial-centered.php:12
+#: patterns/testimonial-centered.php:17
 msgctxt "Name of testimonial pattern"
 msgid "Testimonial"
 msgstr "评价"
 
-#: patterns/text-faq.php:57
+#: patterns/text-faq.php:62
 msgctxt "Question in the FAQ pattern"
 msgid "Can I apply to be a part of the team or work as a contractor?"
 msgstr "我可以申请加入团队或作为承包商工作吗？"
 
-#: patterns/text-faq.php:46
+#: patterns/text-faq.php:51
 msgctxt "Question in the FAQ pattern"
 msgid "I'd like to get to meet fellow architects, how can I do that?"
 msgstr "我想结识建筑师同行，该怎么做？"
 
-#: patterns/text-faq.php:24
+#: patterns/text-faq.php:29
 msgctxt "Question in the FAQ pattern"
 msgid "What is your process working in smaller projects?"
 msgstr "您在小型项目中的工作流程是什么？"
@@ -1696,51 +1696,51 @@ msgctxt "Color name"
 msgid "Base / Two"
 msgstr "基准色 / 二"
 
-#: patterns/text-feature-grid-3-col.php:112
+#: patterns/text-feature-grid-3-col.php:117
 msgctxt "Sample content"
 msgid "Experience the fusion of imagination and expertise with Études Architectural Solutions."
 msgstr "通过 Études 建筑解决方案，体验想象力与专业知识的融合。"
 
-#: patterns/text-feature-grid-3-col.php:43
-#: patterns/text-feature-grid-3-col.php:55
-#: patterns/text-feature-grid-3-col.php:67
-#: patterns/text-feature-grid-3-col.php:88
-#: patterns/text-feature-grid-3-col.php:100
+#: patterns/text-feature-grid-3-col.php:48
+#: patterns/text-feature-grid-3-col.php:60
+#: patterns/text-feature-grid-3-col.php:72
+#: patterns/text-feature-grid-3-col.php:93
+#: patterns/text-feature-grid-3-col.php:105
 msgctxt "Sample feature content"
 msgid "Experience the fusion of imagination and expertise with Études Architectural Solutions."
 msgstr "通过 Études 建筑解决方案，体验想象力与专业知识的融合。"
 
-#: patterns/testimonial-centered.php:18
+#: patterns/testimonial-centered.php:23
 msgctxt "Testimonial Text or Review Text Got From the Person"
 msgid "“Études has saved us thousands of hours of work and has unlocked insights we never thought possible.”"
 msgstr "\"Études 为我们节省了数千小时的工作时间，并让我们获得了从未想到过的洞察力\"。"
 
-#: patterns/hidden-post-navigation.php:12
+#: patterns/hidden-post-navigation.php:17
 msgctxt "Label before the title of the next post. There is a space after the colon."
 msgid "Next: "
 msgstr "下一篇："
 
-#: patterns/gallery-project-layout.php:49
+#: patterns/gallery-project-layout.php:54
 msgctxt "Sample text for the feature area"
 msgid "2. Case studies that celebrate the artistry can fuel curiosity and ignite inspiration."
 msgstr "2. 颂扬艺术性的案例研究可以激发好奇心，点燃灵感。"
 
-#: patterns/gallery-project-layout.php:26
+#: patterns/gallery-project-layout.php:31
 msgctxt "Sample text for the feature area"
 msgid "1. Through Études, we aspire to redefine architectural boundaries and usher in a new era of design excellence that leaves an indelible mark on the built environment."
 msgstr "1. 我们希望通过 Études 重新定义建筑的界限，开创卓越设计的新时代，在建筑环境中留下不可磨灭的印记。"
 
-#: patterns/gallery-project-layout.php:38
+#: patterns/gallery-project-layout.php:43
 msgctxt "Sample text for the feature area"
 msgid "Our comprehensive suite of professional services caters to a diverse clientele, ranging from homeowners to commercial developers. With a commitment to innovation and sustainability, Études is the bridge that transforms architectural dreams into remarkable built realities."
 msgstr "我们提供全面的专业服务，满足从业主到商业开发商等不同客户的需求。Études 致力于创新和可持续发展，是将建筑梦想转化为非凡建筑现实的桥梁。"
 
-#: patterns/cta-services-image-left.php:32
+#: patterns/cta-services-image-left.php:37
 msgctxt "Sample description of the services pattern"
 msgid "Experience the fusion of imagination and expertise with Études—the catalyst for architectural transformations that enrich the world around us."
 msgstr "通过 Études，体验想象力与专业知识的融合--建筑变革的催化剂，丰富我们周围的世界。"
 
-#: patterns/cta-content-image-on-right.php:41
+#: patterns/cta-content-image-on-right.php:46
 msgctxt "Button text of this section"
 msgid "Download app"
 msgstr "下载本站 App"
