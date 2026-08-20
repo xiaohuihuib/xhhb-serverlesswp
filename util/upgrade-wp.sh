@@ -3,9 +3,11 @@
 cd ..
 mkdir temp
 cd temp
+
 wget https://cn.wordpress.org/latest-zh_CN.zip
 unzip latest-zh_CN.zip
 cp ../wp/wp-config.php wordpress/
+
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
@@ -20,17 +22,22 @@ cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-3a5c971b121f299b74a6c03ec1
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-9f22b9f504df7b65b96763ff03cb4cde.json wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-60cecc84730292c14de6fa6a684fa5a2.json wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-925338e6c068b12411f2a3e130f029b4.json wordpress/wp-content/languages/plugins/
+
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
+
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
 unzip amazon-s3-and-cloudfront.zip
 mv amazon-s3-and-cloudfront wordpress/wp-content/plugins/
+
 git clone --depth 1 https://github.com/WordPress/sqlite-database-integration.git
 cp -rL sqlite-database-integration/packages/plugin-sqlite-database-integration wordpress/wp-content/plugins/sqlite-database-integration
 rm -rf sqlite-database-integration
+
 wget https://downloads.wordpress.org/plugin/tidb-compatibility.zip
 unzip tidb-compatibility
 mv tidb-compatibility wordpress/wp-content/plugins/
+
 rm -rf wordpress/wp-content/plugins/hello.php
 rm -rf wordpress/wp-content/themes/twentytwentytwo wordpress/wp-content/themes/twentytwentyone
 rm -rf wordpress/wp-content/themes/twentytwentythree wordpress/wp-content/themes/twentytwentyfour
@@ -67,6 +74,10 @@ mv ai wordpress/wp-content/plugins/
 wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
+
+wget https://downloads.wordpress.org/plugin/indexnow.zip
+unzip indexnow.zip
+mv indexnow wordpress/wp-content/plugins/
 
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
