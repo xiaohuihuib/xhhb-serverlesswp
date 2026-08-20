@@ -160,6 +160,8 @@ define('AUTOMATIC_UPDATER_DISABLED', true);
 
 define('WP_AUTO_UPDATE_CORE', false);
 
+define('WP_HTTP_BLOCK_EXTERNAL', false);
+
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */
