@@ -160,7 +160,7 @@ define('AUTOMATIC_UPDATER_DISABLED', true);
 
 define('WP_AUTO_UPDATE_CORE', false);
 
-define( 'AUTOMATIC_UPDATER_DISABLED', true );
+define('AUTOMATIC_UPDATER_DISABLED', true);
 
 /* That's all, stop editing! Happy publishing. */
 
