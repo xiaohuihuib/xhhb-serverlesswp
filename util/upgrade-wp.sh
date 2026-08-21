@@ -12,9 +12,11 @@ cp ../wp/wp-config.php wordpress/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
@@ -23,6 +25,10 @@ cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-3a5c971b121f299b74a6c03ec1
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-9f22b9f504df7b65b96763ff03cb4cde.json wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-60cecc84730292c14de6fa6a684fa5a2.json wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-925338e6c068b12411f2a3e130f029b4.json wordpress/wp-content/languages/plugins/
+
+cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.po wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.mo wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
 
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
