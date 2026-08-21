@@ -1,0 +1,507 @@
+# Translation of Plugins - XML Sitemap Generator for Google - Stable (latest release) in Chinese (China)
+# This file is distributed under the same license as the Plugins - XML Sitemap Generator for Google - Stable (latest release) package.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2019-07-06 10:05:08+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: GlotPress/4.0.3\n"
+"Language: zh_CN\n"
+"Project-Id-Version: Plugins - XML Sitemap Generator for Google - Stable (latest release)\n"
+
+#: class-googlesitemapgeneratorui.php:1189
+msgid "Enable"
+msgstr "启用"
+
+#: class-googlesitemapgeneratorui.php:1167
+msgid "Disable"
+msgstr "停用"
+
+#: class-googlesitemapgeneratorui.php:660
+msgid "All done!"
+msgstr "全部完成！"
+
+#: class-googlesitemapgeneratorui.php:596
+msgid "The old files could NOT be deleted. Please use an FTP program and delete them by yourself."
+msgstr "旧文件无法删除，请通过FTP手动删除。"
+
+#: class-googlesitemapgeneratorui.php:598
+msgid "The old files were successfully deleted."
+msgstr "旧文件删除成功。"
+
+#: class-googlesitemapgeneratorui.php:638
+msgid "The plugin is notifying the selected search engines about your main sitemap and all sub-sitemaps. This might take a minute or two."
+msgstr "该插件将把您的主站点地图和所有子站点地图提交至选定的搜索引擎。这可能需要一两分钟。"
+
+#: class-googlesitemapgeneratorui.php:676
+#: class-googlesitemapgeneratorui.php:687
+msgid "Ping was executed, please see below for the result."
+msgstr "Ping 已执行，请参阅下面的结果。"
+
+#: class-googlesitemapgeneratorui.php:1148
+msgid "Search engines haven't been notified yet"
+msgstr "搜索引擎还没有得到通知"
+
+#. translators: %s: search term
+#: class-googlesitemapgeneratorui.php:1154
+msgid "Result of the last ping, started on %date%."
+msgstr "最后的 ping 结果，始于 %date%。"
+
+#: class-googlesitemapgeneratorui.php:1163
+msgid "Recent Support Topics / News"
+msgstr "最新支持主题 / 新闻"
+
+#: class-googlesitemapgeneratorui.php:1186
+msgid "No support topics available or an error occurred while fetching them."
+msgstr "没有支持主题或者提取时发生错误。"
+
+#: class-googlesitemapgeneratorui.php:1189
+msgid "Support Topics have been disabled. Enable them to see useful information regarding this plugin. No Ads or Spam!"
+msgstr "支持主题已被禁用。启用设置以便查看关于这个插件的有用信息。没有广告或垃圾邮件！"
+
+#: class-googlesitemapgeneratorui.php:1231
+msgid "%s was <b>successfully notified</b> about changes."
+msgstr "关于更改的 %s 已 <b>成功提交</b>。"
+
+#: class-googlesitemapgeneratorui.php:1234
+msgid "It took %time% seconds to notify %name%, maybe you want to disable this feature to reduce the building time."
+msgstr "提交到 %name% 用时 %time% 秒，您可能想禁用此功能，以减少创建时间。"
+
+#. translators: %s: search term
+#: class-googlesitemapgeneratorui.php:1260
+msgid "If you encounter any problems with your sitemap you can use the <a href=\"%d\">debug function</a> to get more information."
+msgstr "如果您碰到关于您的站点地图的任何问题，您可以使用 <a href=\"%d\">调试功能</a> 来获得更多信息。"
+
+#: class-googlesitemapgeneratorui.php:637
+msgid "Notify Search Engines about all sitemaps"
+msgstr "所有站点地图提交搜索引擎"
+
+#: class-googlesitemapgeneratorui.php:1284
+msgid "Webserver Configuration"
+msgstr "Web 服务器配置"
+
+#: class-googlesitemapgeneratorui.php:1285
+msgid "Since you are using Nginx as your web-server, please configure the following rewrite rules in case you get 404 Not Found errors for your sitemap:"
+msgstr "由于您使用 Nginx 作为 Web 服务器，请配置以下重写规则，以免出现 404 未找到错误："
+
+#: class-googlesitemapgeneratorui.php:1372
+msgid "Try to automatically compress the sitemap if the requesting client supports it."
+msgstr "如果请求的客户端支持，尝试自动压缩站点地图。"
+
+#: class-googlesitemapgeneratorui.php:1374
+msgid "Disable this option if you get garbled content or encoding errors in your sitemap."
+msgstr "如果您的站点地图有乱码或编码错误，请禁用此选项。"
+
+#: class-googlesitemapgeneratorui.php:1386
+msgid "Override the base URL of the sitemap:"
+msgstr "覆盖站点地图的基本链接地址："
+
+#: class-googlesitemapgeneratorui.php:1402
+msgid "Include sitemap in HTML format"
+msgstr "生成包括 HTML 格式的站点地图"
+
+#: class-googlesitemapgeneratorui.php:1405
+msgid "(The required PHP XSL Module is not installed)"
+msgstr "(此功能需要的 PHP XSL 模块未安装)"
+
+#: class-googlesitemapgeneratorui.php:1431
+msgid "Enter the URL to the page. Examples: http://www.foo.com/index.html or www.foo.com/home "
+msgstr "输入这个页面的地址，比如：http://www.foo.com/index.html 或 www.foo.com/home "
+
+#: class-googlesitemapgeneratorui.php:1540
+msgid "WordPress standard content"
+msgstr "WordPress 标准内容"
+
+#: class-googlesitemapgeneratorui.php:1617
+msgid "Custom taxonomies"
+msgstr "自定义分类法"
+
+#: class-googlesitemapgeneratorui.php:1652
+msgid "Custom post types"
+msgstr "自定义文章类型"
+
+#. translators: %s: search term
+#: class-googlesitemapgeneratorui.php:1667
+msgid "Include custom post type %s"
+msgstr "包括自定义文章类型 %s"
+
+#: class-googlesitemapgeneratorui.php:1776
+msgid "Child posts won't be excluded automatically!"
+msgstr "子文章不会被自动排除。"
+
+#: class-googlesitemapgeneratorui.php:1774
+msgid "Exclude the following posts or pages:"
+msgstr "不包括下面的文章或页面："
+
+#: class-googlesitemapgeneratorui.php:1889
+msgid "Minimum post priority (Even if auto calculation is enabled)"
+msgstr "最低文章优先级(Minimum post priority)（即使启用了自动计算）"
+
+#: class-googlesitemapgeneratorui.php:1882
+msgid "Posts (If auto calculation is disabled)"
+msgstr "文章(Posts)（如果自动计算已禁用）"
+
+#: class-googlesitemapgeneratorui.php:1848
+msgid "Older archives (Changes only if you edit an old post)"
+msgstr "较旧的存档（仅在您编辑旧文章时更改）"
+
+#: class-googlesitemapgeneratorui.php:1798
+msgid "Posts"
+msgstr "文章(Posts)"
+
+#: class-googlesitemapgeneratorui.php:1693
+msgid "This is highly recommended and helps the search engines to know when your content has changed. This option affects <i>all</i> sitemap entries."
+msgstr "强烈建议这样做，并帮助搜索引擎了解您的内容何时发生变化。 此选项会影响<i>所有</i>站点地图条目。"
+
+#: class-googlesitemapgeneratorui.php:1529
+msgid "All posts will have the same priority which is defined in &quot;Priorities&quot;"
+msgstr "所有文章将具有相同的优先级，其在&quot;优先级&quot;中定义。"
+
+#: class-googlesitemapgeneratorui.php:1521
+msgid "Please select how the priority of each post should be calculated:"
+msgstr "请选择如何计算每个文章的优先级："
+
+#: class-googlesitemapgeneratorui.php:1519
+msgid "Post Priority"
+msgstr "文章优先(Post Priority)"
+
+#: class-googlesitemapgeneratorui.php:1855
+#: class-googlesitemapgeneratorui.php:1941
+msgid "Tag pages"
+msgstr "标签页面(Tag pages)"
+
+#. translators: %s: search term
+#: class-googlesitemapgeneratorui.php:1632
+msgid "Include taxonomy pages for %s"
+msgstr "包含%s的分类法页面(taxonomy pages)"
+
+#: sitemap.php:345
+msgid "Your PHP version is too old for XML Sitemaps."
+msgstr "您的PHP版本对于XML Sitemaps来说太旧了。"
+
+#: sitemap.php:333
+msgid "Your WordPress version is too old for XML Sitemaps."
+msgstr "您的WordPress版本对于XML Sitemaps来说太旧了。"
+
+#: class-googlesitemapgeneratorui.php:1974
+msgid "Reset options"
+msgstr "重置选项"
+
+#: class-googlesitemapgeneratorui.php:1973
+msgid "Update options"
+msgstr "更新选项"
+
+#: class-googlesitemapgeneratorui.php:1870
+msgid "Priorities"
+msgstr "优先级"
+
+#: class-googlesitemapgeneratorui.php:1862
+#: class-googlesitemapgeneratorui.php:1949
+msgid "Author pages"
+msgstr "作者页面"
+
+#: class-googlesitemapgeneratorui.php:1842
+msgid "The current archive of this month (Should be the same like your homepage)"
+msgstr "本月的当前存档（应该与您的主页相同）"
+
+#: class-googlesitemapgeneratorui.php:1804
+#: class-googlesitemapgeneratorui.php:1896
+msgid "Static pages"
+msgstr "静态页面(Static pages)"
+
+#: class-googlesitemapgeneratorui.php:1772
+msgid "Exclude posts"
+msgstr "排除文章"
+
+#: class-googlesitemapgeneratorui.php:1712
+msgid "Excluded categories"
+msgstr "排除的分类"
+
+#: class-googlesitemapgeneratorui.php:1792
+#: class-googlesitemapgeneratorui.php:1875
+msgid "Homepage"
+msgstr "主页/首页(Homepage)"
+
+#: class-googlesitemapgeneratorui.php:1539
+msgid "Sitemap Content"
+msgstr "站点地图内容"
+
+#: class-googlesitemapgeneratorui.php:1529
+msgid "Do not use automatic priority calculation"
+msgstr "不使用自动优先级计算"
+
+#: class-googlesitemapgeneratorui.php:1513
+msgid "Add new page"
+msgstr "添加新页面"
+
+#: class-googlesitemapgeneratorui.php:1507
+msgid "No pages defined."
+msgstr "未定义页面。(No pages defined.)"
+
+#: class-googlesitemapgeneratorui.php:1437
+msgid "Enter the date of the last change as YYYY-MM-DD (2005-12-31 for example) (optional)."
+msgstr "输入最近更改的日期为YYYY-MM-DD（例如2005-12-31）（可选）。"
+
+#: class-googlesitemapgeneratorui.php:1434
+msgid "Choose the priority of the page relative to the other pages. For example, your homepage might have a higher priority than your imprint."
+msgstr "选择页面相对于其他页面的优先级。 例如，您的主页可能比您的版权标记具有更高的优先级。"
+
+#: class-googlesitemapgeneratorui.php:1433
+#: class-googlesitemapgeneratorui.php:1498
+msgid "Priority"
+msgstr "优先级"
+
+#: class-googlesitemapgeneratorui.php:1427
+#: class-googlesitemapgeneratorui.php:1776
+#: class-googlesitemapgeneratorui.php:1785
+msgid "Note"
+msgstr "注意"
+
+#: class-googlesitemapgeneratorui.php:1106
+msgid "Suggest a Feature"
+msgstr "建议功能（Suggest a Feature）"
+
+#: class-googlesitemapgeneratorui.php:1105
+msgid "Plugin Homepage"
+msgstr "插件主页"
+
+#: sitemap-core.php:651
+msgid "Comment Count"
+msgstr "评论计数"
+
+#: sitemap-core.php:661
+msgid "Uses the number of comments of the post to calculate the priority"
+msgstr "使用文章的评论数来计算优先级"
+
+#: sitemap-core.php:719
+msgid "Comment Average"
+msgstr "评论平均值"
+
+#: sitemap-core.php:729
+msgid "Uses the average comment count to calculate the priority"
+msgstr "使用平均评论计数来计算优先级"
+
+#: sitemap-core.php:917
+msgid "Always"
+msgstr "总是"
+
+#: sitemap-core.php:918
+msgid "Hourly"
+msgstr "每小时"
+
+#: sitemap-core.php:919
+msgid "Daily"
+msgstr "每日"
+
+#: sitemap-core.php:920
+msgid "Weekly"
+msgstr "每周"
+
+#: sitemap-core.php:921
+msgid "Monthly"
+msgstr "每月"
+
+#: sitemap-core.php:922
+msgid "Yearly"
+msgstr "每年"
+
+#: sitemap-core.php:923
+msgid "Never"
+msgstr "从不（Never）"
+
+#: class-googlesitemapgeneratorui.php:547
+msgid "Configuration updated"
+msgstr "配置已更新"
+
+#: class-googlesitemapgeneratorui.php:549
+msgid "Error while saving options"
+msgstr "保存选项时出错"
+
+#: class-googlesitemapgeneratorui.php:554
+msgid "Pages saved"
+msgstr "页面已保存"
+
+#: class-googlesitemapgeneratorui.php:556
+msgid "Error while saving pages"
+msgstr "保存页面时出错"
+
+#: class-googlesitemapgeneratorui.php:586
+msgid "The default configuration was restored."
+msgstr "默认配置已恢复。"
+
+#: class-googlesitemapgeneratorui.php:746
+msgid "Thank you very much for your donation. You help me to continue support and development of this plugin and other free software!"
+msgstr "非常感谢您的捐款。您帮助了我继续支持和开发这个插件和其他免费软件！"
+
+#: class-googlesitemapgeneratorui.php:746
+msgid "Hide this notice"
+msgstr "隐藏此通知"
+
+#: class-googlesitemapgeneratorui.php:778
+msgid "Sure, but I already did!"
+msgstr "当然，但我已经做到了！"
+
+#: class-googlesitemapgeneratorui.php:778
+msgid "No thanks, please don't bug me anymore!"
+msgstr "不，谢谢，请不要再烦我了！"
+
+#: sitemap-core.php:2896
+msgid "Don't show this anymore"
+msgstr "不要再显示这个了"
+
+#: class-googlesitemapgeneratorui.php:1104
+msgid "About this Plugin:"
+msgstr "关于这个插件："
+
+#: class-googlesitemapgeneratorui.php:1110
+msgid "Report a Bug"
+msgstr "报告错误"
+
+#: class-googlesitemapgeneratorui.php:1117
+msgid "Sitemap Resources:"
+msgstr "站点地图资源："
+
+#: class-googlesitemapgeneratorui.php:1123
+msgid "Sitemaps Protocol"
+msgstr "站点地图协议"
+
+#: class-googlesitemapgeneratorui.php:1125
+msgid "Official Sitemaps FAQ"
+msgstr "官方站点地图常见问题解答"
+
+#: class-googlesitemapgeneratorui.php:1301
+msgid "Basic Options"
+msgstr "基本选项"
+
+#: class-googlesitemapgeneratorui.php:1303
+#: class-googlesitemapgeneratorui.php:1361
+#: class-googlesitemapgeneratorui.php:1387
+#: class-googlesitemapgeneratorui.php:1391
+msgid "Learn more"
+msgstr "了解更多"
+
+#: class-googlesitemapgeneratorui.php:1351
+msgid "Add sitemap URL to the virtual robots.txt file."
+msgstr "将站点地图URL添加到虚拟robots.txt文件。"
+
+#: class-googlesitemapgeneratorui.php:1361
+msgid "Advanced options:"
+msgstr "高级选项："
+
+#: class-googlesitemapgeneratorui.php:1364
+msgid "Try to increase the memory limit to:"
+msgstr "尝试提高内存限制至："
+
+#: class-googlesitemapgeneratorui.php:1367
+msgid "Try to increase the execution time limit to:"
+msgstr "尝试提高执行时间限制至："
+
+#: class-googlesitemapgeneratorui.php:1378
+msgid "Include a XSLT stylesheet:"
+msgstr "包含一个XSLT样式表："
+
+#: class-googlesitemapgeneratorui.php:1379
+msgid "Full or relative URL to your .xsl file"
+msgstr ".xsl文件的完整或相对URL"
+
+#: class-googlesitemapgeneratorui.php:1383
+msgid "Use default"
+msgstr "默认情况下使用(Use default)"
+
+#: class-googlesitemapgeneratorui.php:1430
+#: class-googlesitemapgeneratorui.php:1497
+msgid "URL to the page"
+msgstr "页面的URL (URL to the page)"
+
+#: class-googlesitemapgeneratorui.php:1436
+#: class-googlesitemapgeneratorui.php:1500
+msgid "Last Changed"
+msgstr "最近更改(Last Changed)"
+
+#: class-googlesitemapgeneratorloader.php:311
+msgid "XML-Sitemap Generator"
+msgstr "XML-站点地图 生成器"
+
+#: class-googlesitemapgeneratorloader.php:311
+msgid "XML-Sitemap"
+msgstr "XML版站点地图"
+
+#: class-googlesitemapgeneratorloader.php:736
+msgid "Settings"
+msgstr "设置"
+
+#: class-googlesitemapgeneratorloader.php:737
+msgid "FAQ"
+msgstr "常见问题"
+
+#: class-googlesitemapgeneratorloader.php:738
+msgid "Support"
+msgstr "支持"
+
+#: class-googlesitemapgeneratorui.php:1499
+msgid "Change Frequency"
+msgstr "更改频率"
+
+#: class-googlesitemapgeneratorui.php:1501
+msgid "#"
+msgstr "#"
+
+#: class-googlesitemapgeneratorui.php:1545
+msgid "Include homepage"
+msgstr "包括主页"
+
+#: class-googlesitemapgeneratorui.php:1581
+msgid "Include categories"
+msgstr "包括分类"
+
+#: class-googlesitemapgeneratorui.php:1593
+msgid "Include author pages"
+msgstr "包括作者页面"
+
+#: class-googlesitemapgeneratorui.php:1681
+msgid "Further options"
+msgstr "更多选项"
+
+#: class-googlesitemapgeneratorui.php:1686
+msgid "Include the last modification time."
+msgstr "包括最后修改时间。"
+
+#: class-googlesitemapgeneratorui.php:1774
+msgid "List of IDs, separated by comma"
+msgstr "ID列表,以(英文/半角)逗号分隔"
+
+#: class-googlesitemapgeneratorui.php:1810
+#: class-googlesitemapgeneratorui.php:1902
+msgid "Categories"
+msgstr "分类"
+
+#: class-googlesitemapgeneratorui.php:1934
+msgid "Archives"
+msgstr "存档"
+
+#: class-googlesitemapgeneratorui.php:1114
+msgid "translator_url"
+msgstr "https://translate.wordpress.org/locale/zh-cn/default/wp-plugins/google-sitemap-generator/"
+
+#: class-googlesitemapgeneratorui.php:1112
+#: class-googlesitemapgeneratorui.php:1114
+msgid "translator_name"
+msgstr "中文翻译贡献者们"
+
+#: class-googlesitemapgeneratorui.php:1600
+msgid "Include tag pages"
+msgstr "包括标签页面(tag pages)"
+
+#: class-googlesitemapgeneratorui.php:1587
+msgid "Include archives"
+msgstr "包括存档"
+
+#: class-googlesitemapgeneratorui.php:1575
+msgid "Include static pages"
+msgstr "包括静态页面"
+
+#: class-googlesitemapgeneratorui.php:1551
+msgid "Include posts"
+msgstr "包括文章"
