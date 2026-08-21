@@ -26,10 +26,6 @@ cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-9f22b9f504df7b65b96763ff03
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-60cecc84730292c14de6fa6a684fa5a2.json wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-925338e6c068b12411f2a3e130f029b4.json wordpress/wp-content/languages/plugins/
 
-cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.po wordpress/wp-content/languages/plugins/
-cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.mo wordpress/wp-content/languages/plugins/
-cp ../wp/wp-content/languages/plugins/google-sitemap-generator-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
-
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
 
@@ -85,10 +81,6 @@ mv ai wordpress/wp-content/plugins/
 wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
-
-wget https://downloads.wordpress.org/plugin/https://downloads.wordpress.org/plugin/google-sitemap-generator.4.1.24.zip
-unzip google-sitemap-generator.4.1.24.zip
-mv google-sitemap-generator wordpress/wp-content/plugins/
 
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
