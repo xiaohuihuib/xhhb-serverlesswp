@@ -80,6 +80,10 @@ wget https://downloads.wordpress.org/plugin/ai-provider-for-cloudflare.1.0.0.zip
 unzip ai-provider-for-cloudflare.1.0.0.zip
 mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
 
+wget https://downloads.wordpress.org/plugin/https://downloads.wordpress.org/plugin/google-sitemap-generator.4.1.24.zip
+unzip google-sitemap-generator.4.1.24.zip
+mv google-sitemap-generator wordpress/wp-content/plugins/
+
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
 mv wordfence wordpress/wp-content/plugins/
