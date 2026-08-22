@@ -85,6 +85,10 @@ wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
 mv wordfence wordpress/wp-content/plugins/
 
+wget https://dl1.weixiaoduo.com/2025/01/wp-china-yes.3.8.zip
+unzip wp-china-yes.3.8.zip
+mv wp-china-yes wordpress/wp-content/plugins/
+
 rm -rf ../wp
 mv wordpress ../wp
 cd ..
