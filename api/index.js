@@ -3,15 +3,11 @@ const serverlesswp = require('serverlesswp');
 
 const { validate } = require('../util/install.js');
 const { setup } = require('../util/directory.js');
-const storage = require('../util/storage.js');
 const sandbox = require('../util/sandbox.js');
 const readOnly = require('../util/readOnly.js');
 
 const pathToWP = '/tmp/wp';
 const wpContentPath = pathToWP + '/wp-content';
-const sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
-
-const database = storage.resolve();
 
 // Load executable bootstrap only from the read-only bundle.
 const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/bootstrap/prepend.php';
@@ -42,11 +38,6 @@ exports.handler = async function (event, context, callback) {
         // Block mutations before opening SQLite.
         if (readOnlyActive) {
             serverlesswp.registerPlugin(readOnly);
-        }
-        if (database.plugin) {
-            await database.plugin.prepPlugin(wpContentPath, sqlitePluginPath);
-            database.plugin.config(database.config);
-            serverlesswp.registerPlugin(database.plugin);
         }
         if (process.env['SERVERLESSWP_DATA_SECRET']) {
             serverlesswp.registerPlugin(sandbox);
