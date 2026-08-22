@@ -25,10 +25,6 @@ exports.validate = function(response) {
     data.username = process.env['USERNAME'] ? '✔️' : '❌';
     data.password = process.env['PASSWORD'] ? '✔️' : '❌';
     data.host = process.env['HOST'] ? '✔️' : '❌';
-    data.sqliteBucket = process.env['SQLITE_S3_BUCKET'] ? '✔️' : '❌';
-    data.sqliteKey = process.env['SQLITE_S3_API_KEY'] ? '✔️' : '❌';
-    data.sqliteSecret = process.env['SQLITE_S3_API_SECRET'] ? '✔️' : '❌';
-    data.sqliteRegion = process.env['SQLITE_S3_REGION'] ? '✔️' : '❌';
  
     return {
       statusCode: 200,
@@ -71,19 +67,6 @@ return `<!doctype html>
       <p>Having trouble? Send a <a href="https://serverlesswp.com/chat" target="_blank">chat message</a>.</p>
       <br>
       <br>
-      <article><details>
-        <summary>SQLite + S3 database alternative</summary>
-        <p>Want to try WordPress without a database server?</p>
-        <p>A super low cost and low maintenance way to handle WordPress data is to combine SQLite as a database with S3 storage. ServerlessWP does all of the hard work to keep the data in-sync.<p>
-        <p>It's great for blogs, portfolios, and documentation sites.</p>
-        <p>Check out the project <a href="https://github.com/mitchmac/serverlesswp/?tab=readme-ov-file#sqlite--s3-database-option" target="_blank">readme</a> for more details.</p>
-        <p>The environment variables to try this approach should be:</p>
-        <ul>
-          <li>${data.sqliteBucket} SQLITE_S3_BUCKET (bucket name you created)</li>
-          <li>${data.sqliteKey} SQLITE_S3_API_KEY (key to access the bucket)</li>
-          <li>${data.sqliteSecret} SQLITE_S3_API_SECRET (key to access the bucket)</li>
-          <li>${data.sqliteRegion} SQLITE_S3_REGION (region where the bucket lives - create it near your serverless functions)</li>
-        </ul>
       </details></article>
       <br>
       <br>
