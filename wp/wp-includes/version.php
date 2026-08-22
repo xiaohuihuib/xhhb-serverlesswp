@@ -55,3 +55,5 @@ $required_php_extensions = array(
  * @global string $required_mysql_version
  */
 $required_mysql_version = '5.5.5';
+
+$wp_local_package = 'zh_CN';
