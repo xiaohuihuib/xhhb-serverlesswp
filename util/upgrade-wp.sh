@@ -80,6 +80,10 @@ wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
 mv wordfence wordpress/wp-content/plugins/
 
+wget https://downloads.wordpress.org/plugin/wp-super-cache.3.1.1.zip
+unzip wp-super-cache.3.1.1.zip
+mv wp-super-cache wordpress/wp-content/plugins/
+
 rm -rf ../wp
 mv wordpress ../wp
 cd ..
