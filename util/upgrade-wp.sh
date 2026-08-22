@@ -38,7 +38,7 @@ cp -r ../wp/wp-content/mu-plugins/serverlesswp-stream-wrapper wordpress/wp-conte
 
 wget https://downloads.wordpress.org/plugin/tidb-compatibility.zip
 unzip tidb-compatibility
-mv tidb-compatibility wordpress/wp-content/mu-plugins/
+mv tidb-compatibility wordpress/wp-content/plugins/
 
 wget https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip
 unzip argon.zip
