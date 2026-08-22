@@ -28,6 +28,8 @@ cp ../wp/wp-content/languages/plugins/wordfence-zh_CN-925338e6c068b12411f2a3e130
 
 mkdir wordpress/wp-content/mu-plugins
 cp ../wp/wp-content/mu-plugins/serverlesswp.php wordpress/wp-content/mu-plugins/
+cp ../wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/ wordpress/wp-content/mu-plugins/
+cp ../wp/wp-content/mu-plugins/serverlesswp-stream-wrapper.php wordpress/wp-content/mu-plugins/
 
 wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
 unzip amazon-s3-and-cloudfront.zip
