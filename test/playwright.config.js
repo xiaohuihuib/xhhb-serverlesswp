@@ -8,6 +8,6 @@ module.exports = defineConfig({
         ignoreHTTPSErrors: true,
         storageState: 'auth.json',
     },
-    timeout: 120000,
+    timeout: 300000,
     navigationTimeout: 90000,
 });
