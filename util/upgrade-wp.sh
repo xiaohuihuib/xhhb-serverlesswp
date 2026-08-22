@@ -17,6 +17,10 @@ cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.po wordpress/wp-c
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
 
+cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.po wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.mo wordpress/wp-content/languages/plugins/
+cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
+
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
