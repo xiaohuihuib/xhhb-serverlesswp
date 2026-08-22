@@ -120,6 +120,9 @@ define('WP_HOME', 'https://' . $_SERVER['HTTP_HOST']);
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
+define('WP_CACHE', true);
+define( 'WPCACHEHOME', '/tmp/wp/wp-content/plugins/wp-super-cache/' )
+
 define('WP_DEFAULT_THEME', 'argon');
 
 define('AUTOMATIC_UPDATER_DISABLED', true);
