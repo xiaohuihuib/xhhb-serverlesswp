@@ -8,6 +8,9 @@ wget https://cn.wordpress.org/latest-zh_CN.zip
 unzip latest-zh_CN.zip
 
 cp ../wp/wp-config.php wordpress/
+cp ../wp/wordfence-waf.php wordpress/
+cp ../wp/wp-content/advanced-cache.php wordpress/wp-content/
+cp ../wp/wp-content/wp-cache-config.php wordpress/wp-content/
 
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
