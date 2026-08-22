@@ -9,8 +9,6 @@ unzip latest-zh_CN.zip
 
 cp ../wp/wp-config.php wordpress/
 cp ../wp/wordfence-waf.php wordpress/
-cp ../wp/wp-content/advanced-cache.php wordpress/wp-content/
-cp ../wp/wp-content/wp-cache-config.php wordpress/wp-content/
 
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/asgaros-forum-zh_CN.mo wordpress/wp-content/languages/plugins/
@@ -86,10 +84,6 @@ mv ai-provider-for-cloudflare wordpress/wp-content/plugins/
 wget https://downloads.wordpress.org/plugin/wordfence.9.0.0.zip
 unzip wordfence.9.0.0.zip
 mv wordfence wordpress/wp-content/plugins/
-
-wget https://downloads.wordpress.org/plugin/wp-super-cache.3.1.1.zip
-unzip wp-super-cache.3.1.1.zip
-mv wp-super-cache wordpress/wp-content/plugins/
 
 rm -rf ../wp
 mv wordpress ../wp
