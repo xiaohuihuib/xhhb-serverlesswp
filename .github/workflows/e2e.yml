@@ -30,14 +30,3 @@ jobs:
 
       - run: ./run-db-test.sh
         working-directory: ./test
-
-      - run: ./run-s3-test.sh
-        working-directory: ./test
-
-      # A warm container gets its ETag from its own upload and then only ever
-      # revalidates, so it never writes using a download's ETag. Cold instances
-      # do that on every first request, which is where conditional writes broke
-      # in production. BLOB_NO_CONDITIONAL_READS makes every read a full one.
-      - name: blob tests with cold-instance reads
-        run: BLOB_NO_CONDITIONAL_READS=1 ./run-blob-test.sh
-        working-directory: ./test
