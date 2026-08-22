@@ -106,6 +106,16 @@ https.createServer(ssl, (req, res) => {
     const [urlPath, qs] = req.url.split('?');
     const ext = path.extname(urlPath).toLowerCase();
 
+    if (urlPath.startsWith('/wp-content/uploads/')) {
+        if (!(ext in STATIC_MIME)) {
+            res.statusCode = 404;
+            res.setHeader('content-type', 'text/plain');
+            res.end('Not Found');
+            return;
+        }
+    }
+    // ---------------------------------
+
     // Serve static files directly — no Lambda needed.
     if (ext in STATIC_MIME && !urlPath.endsWith('.php')) {
         serveStatic(urlPath, res, () => {
