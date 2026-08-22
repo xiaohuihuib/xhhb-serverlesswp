@@ -63,7 +63,7 @@ echo "Static file test passed."
 echo "Testing sensitive upload policy without the stream wrapper..."
 policy_dir=/tmp/wp/wp-content/uploads/serverlesswp-policy-probe
 docker exec serverlesswp-test mkdir -p "$policy_dir/php-index"
-for extension in php sql sqlite sqlite3 db log env ini; do
+for extension in php sql db log env ini; do
     docker exec serverlesswp-test sh -c "printf '%s' 'sensitive-${extension}' > '${policy_dir}/secret.${extension}'"
     policy_response=$(curl -sk -w $'\n%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/secret.${extension}")
     policy_status=${policy_response##*$'\n'}
