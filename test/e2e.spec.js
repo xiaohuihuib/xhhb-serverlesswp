@@ -45,13 +45,17 @@ test('create and view a post', async ({ page }) => {
         page.waitForEvent('popup'),
         page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click(),
     ]);
-    await expect(postPage.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post');
-    await expect(postPage.getByText('Hello from Playwright.')).toBeVisible();
+    // The Argon theme renders the single-post title as a.post-title inside
+    // article.post-full, not as h1.wp-block-post-title (block theme default).
+    await expect(postPage.locator('article.post-full a.post-title')).toHaveText('Playwright Test Post');
+    await expect(postPage.locator('.post-content').getByText('Hello from Playwright.')).toBeVisible();
 });
 
 test('search for a post', async ({ page }) => {
     await page.goto('/?s=Playwright+Test+Post', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('.wp-block-query.alignfull').getByRole('heading', { name: /Playwright Test Post/i })).toBeVisible();
+    // Argon search results use .search-result article a.post-title instead of
+    // the block theme's .wp-block-query.alignfull heading.
+    await expect(page.locator('.search-result article a.post-title').filter({ hasText: /Playwright Test Post/i })).toBeVisible();
 });
 
 test('edit a post', async ({ page }) => {
@@ -71,7 +75,7 @@ test('edit a post', async ({ page }) => {
         page.waitForEvent('popup'),
         page.locator('.components-snackbar').getByRole('link', { name: 'View Post' }).click(),
     ]);
-    await expect(editedPage.locator('h1.wp-block-post-title')).toHaveText('Playwright Test Post (edited)');
+    await expect(editedPage.locator('article.post-full a.post-title')).toHaveText('Playwright Test Post (edited)');
 });
 
 test('delete a post', async ({ page }) => {
