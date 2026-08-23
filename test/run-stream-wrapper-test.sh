@@ -98,7 +98,9 @@ for i in $(seq 1 60); do
     login_response=$(curl -sk --max-time 10 -w $'\n%{http_code}' https://localhost:3000/wp-login.php || true)
     login_status=${login_response##*$'\n'}
     login_body=${login_response%$'\n'*}
-    if echo "$login_body" | grep -q "Username or Email Address"; then
+    # Use a language-independent marker (the login form) rather than the
+    # translated label text, which depends on WPLANG.
+    if echo "$login_body" | grep -q 'id="loginform"'; then
         echo "WordPress login page is ready."
         break
     fi
