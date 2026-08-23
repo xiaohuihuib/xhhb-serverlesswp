@@ -33,7 +33,21 @@ let initDone = false;
 
 setup();
 
+function sanitizeHeaders(headers) {
+    if (!headers) return {};
+    const safe = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (typeof value === 'string' && /^[\x00-\x7F]*$/.test(value)) {
+            safe[key] = value;
+        }
+    }
+    return safe;
+}
+// ------------------------------------------------------------
+
 exports.handler = async function (event, context, callback) {
+    const cleanEvent = { ...event, headers: sanitizeHeaders(event.headers) };
+
     if (!initDone) {
         // Block mutations before opening SQLite.
         if (readOnlyActive) {
@@ -45,7 +59,7 @@ exports.handler = async function (event, context, callback) {
         initDone = true;
     }
 
-    const options = { docRoot: pathToWP, event: event };
+    const options = { docRoot: pathToWP, event: cleanEvent };
     if (fs.existsSync(requestRouter)) {
         options.routerScript = requestRouter;
     }
