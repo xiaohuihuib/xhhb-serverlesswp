@@ -14,7 +14,7 @@ jobs:
   unit:
     name: unit tests
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mitchmac'
+    if: github.repository_owner == 'xiaohuihuib'
     defaults:
       run:
         working-directory: ./packages/serverlesswp-stream-wrapper
@@ -36,7 +36,7 @@ jobs:
   deployable-copy:
     name: deployable copy is current
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mitchmac'
+    if: github.repository_owner == 'xiaohuihuib'
     defaults:
       run:
         working-directory: ./packages/serverlesswp-stream-wrapper
@@ -50,7 +50,7 @@ jobs:
   e2e:
     name: e2e tests
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'mitchmac'
+    if: github.repository_owner == 'xiaohuihuib'
     needs: unit
     defaults:
       run:
