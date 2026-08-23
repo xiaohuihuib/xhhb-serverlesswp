@@ -102,6 +102,22 @@ function decompress(buf, encoding) {
     });
 }
 
+function isAsciiSafe(value) {
+    return typeof value === 'string' && /^[\x00-\x7F]*$/.test(value);
+}
+
+function sanitizeHeaders(headers) {
+    if (!headers) return {};
+    const safe = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (isAsciiSafe(value)) {
+            safe[key] = value;
+        }
+    }
+    return safe;
+}
+// --------------------------------------
+
 https.createServer(ssl, (req, res) => {
     const [urlPath, qs] = req.url.split('?');
     const ext = path.extname(urlPath).toLowerCase();
@@ -114,7 +130,6 @@ https.createServer(ssl, (req, res) => {
             return;
         }
     }
-    // ---------------------------------
 
     // Serve static files directly — no Lambda needed.
     if (ext in STATIC_MIME && !urlPath.endsWith('.php')) {
@@ -137,15 +152,16 @@ function forwardToLambda(req, res, urlPath, qs) {
     req.on('data', c => chunks.push(c));
     req.on('end', () => {
         const body = Buffer.concat(chunks);
-        // Strip accept-encoding so PHP returns plain (uncompressed) responses.
-        const { 'accept-encoding': _ae, ...forwardHeaders } = req.headers;
+        const cleanedHeaders = sanitizeHeaders(req.headers);
+        delete cleanedHeaders['accept-encoding'];
         if (OIDC_TOKEN) {
-            forwardHeaders['x-vercel-oidc-token'] = OIDC_TOKEN;
+            cleanedHeaders['x-vercel-oidc-token'] = OIDC_TOKEN;
         }
+
         const event = JSON.stringify({
             path: urlPath,
             httpMethod: req.method,
-            headers: forwardHeaders,
+            headers: cleanedHeaders,
             rawQueryString: qs || '',
             queryStringParameters: qs ? Object.fromEntries(new URLSearchParams(qs)) : null,
             body: body.length ? body.toString('base64') : null,
