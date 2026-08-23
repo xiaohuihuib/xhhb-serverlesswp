@@ -23,11 +23,12 @@ exports.postRequest = async function(event, response) {
     }
 
     const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
-    const setCookie = response.headers['set-cookie'] || response.headers['Set-Cookie'];
     const requestCookies = event.headers?.cookie || event.headers?.Cookie || '';
     // In read-only mode anonymous HTML GETs should always be cacheable at the
-    // edge. Override any no-cache headers WordPress/themes may have emitted.
-    if (contentType.includes('text/html') && !setCookie && !requestCookies) {
+    // edge. Themes (e.g. Argon) may emit Set-Cookie/no-cache headers, but those
+    // are not personalization in this context, so override cache-control while
+    // still respecting request-side cookies.
+    if (contentType.includes('text/html') && !requestCookies) {
         const maxAge = process.env.SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE || 86400;
         response.headers['cache-control'] = `max-age=0, s-maxage=${maxAge}`;
     }
