@@ -23,10 +23,11 @@ exports.postRequest = async function(event, response) {
     }
 
     const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
-    const cacheControl = response.headers['cache-control'] || response.headers['Cache-Control'];
     const setCookie = response.headers['set-cookie'] || response.headers['Set-Cookie'];
     const requestCookies = event.headers?.cookie || event.headers?.Cookie || '';
-    if (contentType.includes('text/html') && !cacheControl && !setCookie && !requestCookies) {
+    // In read-only mode anonymous HTML GETs should always be cacheable at the
+    // edge. Override any no-cache headers WordPress/themes may have emitted.
+    if (contentType.includes('text/html') && !setCookie && !requestCookies) {
         const maxAge = process.env.SERVERLESSWP_READ_ONLY_CACHE_MAX_AGE || 86400;
         response.headers['cache-control'] = `max-age=0, s-maxage=${maxAge}`;
     }
