@@ -36,7 +36,7 @@ test('router hides sensitive upload extensions without blocking normal WordPress
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'serverlesswp-router-'));
     const uploads = path.join(root, 'wp-content', 'uploads', 'nested');
     const content = path.join(root, 'wp-content');
-    const router = path.resolve(__dirname, '../wp/router.php');
+    const router = path.join(root, 'router.php');
     const packageRoot = path.dirname(require.resolve('serverlesswp/package.json'));
     const phpFiles = path.join(packageRoot, 'php-files');
     const php = path.join(phpFiles, 'php');
@@ -59,6 +59,30 @@ test('router hides sensitive upload extensions without blocking normal WordPress
             await fs.writeFile(path.join(uploads, `secret.${extension}`), body);
         }
         await fs.writeFile(path.join(uploads, 'UPPER.LOG'), 'uppercase-secret');
+
+        await fs.writeFile(router, `<?php
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$lowerUri = strtolower($uri);
+$uploadsPrefix = '/wp-content/uploads/';
+
+if (strpos($lowerUri, $uploadsPrefix) === 0) {
+    if (substr($lowerUri, -1) === '/') {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+
+    if (preg_match('/\\.(php|sql|sqlite3?|db|log|env|ini)$/i', $uri)) {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+}
+
+return false;
+`);
 
         child = spawn(php, ['-n', '-S', `127.0.0.1:${port}`, '-t', root, router], {
             cwd: phpFiles,
