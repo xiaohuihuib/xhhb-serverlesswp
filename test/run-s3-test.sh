@@ -82,20 +82,36 @@ content_type=${static_check#* }
 [[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
 echo "Static file test passed."
 
+: "Run the installer before Playwright so the login form actually exists."
+echo "Installing WordPress..."
+if ! curl -skf --max-time 120 https://localhost:3000/installer.php >/dev/null 2>&1; then
+    echo "WordPress installer failed or timed out."
+    echo "Proxy log tail:"
+    tail -n 50 "$PROXY_LOG" || true
+    exit 1
+fi
+echo "WordPress installer completed."
+
 echo "Waiting for WordPress login page to be ready..."
 for i in $(seq 1 60); do
-    login_body=$(curl -sk --max-time 10 https://localhost:3000/wp-login.php || true)
+    login_response=$(curl -sk --max-time 10 -w $'\n%{http_code}' https://localhost:3000/wp-login.php || true)
+    login_status=${login_response##*$'\n'}
+    login_body=${login_response%$'\n'*}
     if echo "$login_body" | grep -q "Username or Email Address"; then
         echo "WordPress login page is ready."
         break
     fi
     if [ "$i" -eq 60 ]; then
         echo "WordPress login page did not become ready in time."
+        echo "HTTP status: $login_status"
+        echo "Response body (first 1000 chars):"
+        echo "$login_body" | head -c 1000
+        echo
         echo "Proxy log tail:"
         tail -n 50 "$PROXY_LOG" || true
         exit 1
     fi
-    echo "  attempt $i: login page not ready yet"
+    echo "  attempt $i: login page not ready yet (status: $login_status)"
     sleep 5
 done
 
