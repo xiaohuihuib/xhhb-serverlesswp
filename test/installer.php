@@ -18,9 +18,11 @@ if (!is_blog_installed()) {
     $admin_email = 'admin@example.com';
     $public = TRUE;
 
-    // Force English so Playwright selectors and the login-page readiness
-    // check can rely on English labels (e.g. "Username or Email Address").
-    $result = wp_install($weblog_title, $user_name, $admin_email, $public, '', 'testpassword123', 'en_US');
+    // The bundled WordPress package has $wp_local_package = 'zh_CN', which
+    // makes the login/admin UI default to Chinese. Pass an empty language and
+    // force WPLANG to empty so Playwright selectors can rely on English labels.
+    $result = wp_install($weblog_title, $user_name, $admin_email, $public, '', 'testpassword123', '');
+    update_option('WPLANG', '');
     update_user_meta( 1, 'default_password_nag', false );
     // Suppress Gutenberg's welcome guide modal
     update_user_meta( 1, 'wp_persisted_preferences', [
