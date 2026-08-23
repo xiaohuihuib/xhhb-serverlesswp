@@ -48,6 +48,7 @@ rm -rf wordpress/wp-content/plugins/hello.php
 rm -rf wordpress/wp-content/themes/twentytwentytwo wordpress/wp-content/themes/twentytwentyone
 rm -rf wordpress/wp-content/themes/twentytwentythree wordpress/wp-content/themes/twentytwentyfour
 rm -rf wordpress/wp-content/themes/twentytwenty wordpress/wp-content/themes/twentytwentyfive
+rm -rf wordpress/wp-content/languages/themes
 
 wget https://downloads.wordpress.org/plugin/simple-cloudflare-turnstile.zip
 unzip simple-cloudflare-turnstile.zip
