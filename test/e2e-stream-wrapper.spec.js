@@ -185,7 +185,7 @@ test.describe('serving from object storage', () => {
 
 test.describe('media uploads', () => {
     test('an uploaded image and its generated sizes survive local disk loss', async ({ page, request }) => {
-        await page.goto('/wp-admin/media-new.php?browser-uploader');
+        await page.goto('/wp-admin/media-new.php?browser-uploader', { waitUntil: 'domcontentloaded' });
 
         await page.setInputFiles('#async-upload', {
             name: 'stream-wrapper-test.png',
@@ -215,7 +215,7 @@ test.describe('media uploads', () => {
         ).toContain('upload.php');
 
         // Find the attachment's URLs from the media library.
-        await page.goto('/wp-admin/upload.php?mode=list');
+        await page.goto('/wp-admin/upload.php?mode=list', { waitUntil: 'domcontentloaded' });
         // Not a.row-title: WordPress 7.x dropped that class from the media
         // list's title link. Match the link by its accessible name.
         const link = page.getByRole('link', { name: 'stream-wrapper-test', exact: true }).first();

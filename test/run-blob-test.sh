@@ -62,7 +62,8 @@ docker run \
     -p 9000:8080 \
     -d --name serverlesswp-test serverlesswp-blob-test
 
-node proxy.js > /dev/null 2>&1 &
+PROXY_LOG="$PWD/proxy.log"
+node proxy.js > "$PROXY_LOG" 2>&1 &
 PROXY_PID=$!
 
 cleanup() {
@@ -84,6 +85,23 @@ content_type=${static_check#* }
 [[ "$http_code" == "200" ]] || { echo "Static file test FAILED: expected 200, got $http_code"; exit 1; }
 [[ "$content_type" == *"text/css"* ]] || { echo "Static file content-type FAILED: expected text/css, got $content_type"; exit 1; }
 echo "Static file test passed."
+
+echo "Waiting for WordPress login page to be ready..."
+for i in $(seq 1 60); do
+    login_body=$(curl -sk --max-time 10 https://localhost:3000/wp-login.php || true)
+    if echo "$login_body" | grep -q "Username or Email Address"; then
+        echo "WordPress login page is ready."
+        break
+    fi
+    if [ "$i" -eq 60 ]; then
+        echo "WordPress login page did not become ready in time."
+        echo "Proxy log tail:"
+        tail -n 50 "$PROXY_LOG" || true
+        exit 1
+    fi
+    echo "  attempt $i: login page not ready yet"
+    sleep 5
+done
 
 npm ci
 npx playwright install chromium

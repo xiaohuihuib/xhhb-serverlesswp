@@ -10,14 +10,14 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 
 test('homepage loads', async ({ page }) => {
-    const response = await page.goto('/');
+    const response = await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/.+/);
     expect(response.headers()['cache-control']).toMatch(/max-age=0/);
     expect(response.headers()['cache-control']).toMatch(/s-maxage=3600/);
 });
 
 test('GET requests are allowed', async ({ page }) => {
-    await page.goto('/wp-login.php');
+    await page.goto('/wp-login.php', { waitUntil: 'domcontentloaded' });
     await expect(page.getByLabel('Username or Email Address')).toBeVisible();
 });
 

@@ -65,7 +65,8 @@ docker run \
     --network serverlesswp-stream-wrapper-network \
     -d --name serverlesswp-stream-wrapper serverlesswp-test
 
-node proxy.js > /dev/null 2>&1 &
+PROXY_LOG="$PWD/proxy.log"
+node proxy.js > "$PROXY_LOG" 2>&1 &
 PROXY_PID=$!
 
 cleanup() {
@@ -81,6 +82,23 @@ cleanup() {
 trap cleanup EXIT
 
 until curl -sfko /dev/null https://localhost:3000/; do sleep 1; done
+
+echo "Waiting for WordPress login page to be ready..."
+for i in $(seq 1 60); do
+    login_body=$(curl -sk --max-time 10 https://localhost:3000/wp-login.php || true)
+    if echo "$login_body" | grep -q "Username or Email Address"; then
+        echo "WordPress login page is ready."
+        break
+    fi
+    if [ "$i" -eq 60 ]; then
+        echo "WordPress login page did not become ready in time."
+        echo "Proxy log tail:"
+        tail -n 50 "$PROXY_LOG" || true
+        exit 1
+    fi
+    echo "  attempt $i: login page not ready yet"
+    sleep 5
+done
 
 npm ci
 npx playwright install chromium

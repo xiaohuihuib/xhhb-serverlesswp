@@ -10,4 +10,7 @@ module.exports = defineConfig({
     },
     timeout: 120000,
     navigationTimeout: 90000,
+    // Avoid 3s git fetch timeouts in CI when Playwright tries to capture
+    // commit/diff info for the HTML report.
+    captureGitInfo: false,
 });

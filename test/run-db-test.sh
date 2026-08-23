@@ -19,7 +19,7 @@ docker run -d --name mariadb \
     -e "MYSQL_DATABASE=testdb" \
     -e "MYSQL_USER=testuser" \
     -e "MYSQL_PASSWORD=testpass" \
-    mariadb:latest
+    mariadb:10.11
 
 # Wait for MariaDB to be ready
 echo "Waiting for MariaDB to be ready..."
@@ -37,7 +37,8 @@ docker run \
     --network serverlesswp-test-network \
     -d --name serverlesswp-test serverlesswp-test
 
-node proxy.js > /dev/null 2>&1 &
+PROXY_LOG="$PWD/proxy.log"
+node proxy.js > "$PROXY_LOG" 2>&1 &
 PROXY_PID=$!
 
 cleanup() {
@@ -82,6 +83,23 @@ public_body=${public_response%$'\n'*}
 [[ "$public_status" == "200" ]] || { echo "Normal upload FAILED: expected 200, got $public_status"; exit 1; }
 [[ "$public_body" == "public-upload" ]] || { echo "Normal upload FAILED after applying sensitive-file policy"; exit 1; }
 echo "Sensitive upload policy test passed."
+
+echo "Waiting for WordPress login page to be ready..."
+for i in $(seq 1 60); do
+    login_body=$(curl -sk --max-time 10 https://localhost:3000/wp-login.php || true)
+    if echo "$login_body" | grep -q "Username or Email Address"; then
+        echo "WordPress login page is ready."
+        break
+    fi
+    if [ "$i" -eq 60 ]; then
+        echo "WordPress login page did not become ready in time."
+        echo "Proxy log tail:"
+        tail -n 50 "$PROXY_LOG" || true
+        exit 1
+    fi
+    echo "  attempt $i: login page not ready yet"
+    sleep 5
+done
 
 npm ci
 npx playwright install chromium

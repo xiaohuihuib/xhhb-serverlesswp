@@ -42,6 +42,19 @@ if (!is_blog_installed()) {
             'serve-from-s3' => '1',
         ]);
     }
+
+    // Suppress Argon theme outbound calls that can time out in CI and make
+    // every page load hang (analytics ping, update checker, Google Fonts).
+    update_option('argon_has_inited', 'true');
+    update_option('argon_update_source', 'stop');
+    update_option('argon_disable_googlefont', 'true');
+
+    // Prevent WordPress from making external api.wordpress.org update checks
+    // on the first admin page loads in CI, which can each block for several
+    // seconds and exceed Playwright's navigation timeout.
+    set_site_transient('update_plugins', (object) ['response' => [], 'translations' => [], 'no_update' => []], WEEK_IN_SECONDS);
+    set_site_transient('update_themes', (object) ['response' => [], 'translations' => [], 'no_update' => []], WEEK_IN_SECONDS);
+    set_site_transient('update_core', (object) ['updates' => [], 'last_checked' => time()], WEEK_IN_SECONDS);
 } else {
     echo 'WordPress is already installed.';
 }

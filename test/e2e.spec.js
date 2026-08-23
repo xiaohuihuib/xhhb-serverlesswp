@@ -8,7 +8,7 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 
 test('homepage loads', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/.+/);
 });
 
@@ -16,7 +16,7 @@ test.describe('unauthenticated', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test('login', async ({ page }) => {
-        await page.goto('/wp-login.php');
+        await page.goto('/wp-login.php', { waitUntil: 'domcontentloaded' });
         await page.getByLabel('Username or Email Address').fill('admin');
         await page.getByLabel('Password', { exact: true }).fill('testpassword123');
         await page.getByRole('button', { name: 'Log In' }).click();
@@ -26,7 +26,7 @@ test.describe('unauthenticated', () => {
 });
 
 test('create and view a post', async ({ page }) => {
-    await page.goto('/wp-admin/post-new.php');
+    await page.goto('/wp-admin/post-new.php', { waitUntil: 'domcontentloaded' });
 
     // Gutenberg renders editor content inside an iframe in WP 6.x
     const editorFrame = page.frameLocator('[aria-label="Editor content"] iframe');
@@ -50,12 +50,12 @@ test('create and view a post', async ({ page }) => {
 });
 
 test('search for a post', async ({ page }) => {
-    await page.goto('/?s=Playwright+Test+Post');
+    await page.goto('/?s=Playwright+Test+Post', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.wp-block-query.alignfull').getByRole('heading', { name: /Playwright Test Post/i })).toBeVisible();
 });
 
 test('edit a post', async ({ page }) => {
-    await page.goto('/wp-admin/edit.php');
+    await page.goto('/wp-admin/edit.php', { waitUntil: 'domcontentloaded' });
     await page.getByRole('link', { name: 'Playwright Test Post' }).first().click();
 
     // Gutenberg renders editor content inside an iframe in WP 6.x
@@ -75,7 +75,7 @@ test('edit a post', async ({ page }) => {
 });
 
 test('delete a post', async ({ page }) => {
-    await page.goto('/wp-admin/edit.php');
+    await page.goto('/wp-admin/edit.php', { waitUntil: 'domcontentloaded' });
 
     const row = page.locator('tr').filter({ hasText: 'Playwright Test Post (edited)' });
     await row.hover();
@@ -86,11 +86,11 @@ test('delete a post', async ({ page }) => {
 });
 
 test('change site name', async ({ page }) => {
-    await page.goto('/wp-admin/options-general.php');
+    await page.goto('/wp-admin/options-general.php', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Site Title').fill('ServerlessWP Test Site');
     await page.getByRole('button', { name: 'Save Changes' }).click();
     await expect(page.locator('#message, .notice-success')).toContainText(/saved/i);
 
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page).toHaveTitle(/ServerlessWP Test Site/);
 });

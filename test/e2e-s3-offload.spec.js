@@ -8,7 +8,7 @@ test.afterEach(async ({ page }, testInfo) => {
 });
 
 test('upload media to s3', async ({ page }) => {
-    await page.goto('/wp-admin/media-new.php');
+    await page.goto('/wp-admin/media-new.php', { waitUntil: 'domcontentloaded' });
 
     // WordPress stores the uploader choice per user (the wp-settings cookie and
     // the matching user option), so a run against a site where this test has
@@ -39,7 +39,7 @@ test('upload media to s3', async ({ page }) => {
     ]);
 
     // Navigate to the attachment edit page to inspect the file URL.
-    await page.goto('/wp-admin/upload.php?mode=list');
+    await page.goto('/wp-admin/upload.php?mode=list', { waitUntil: 'domcontentloaded' });
     // Match the title link by accessible name: WP 7.x renders the list table's
     // primary column as <th scope="row">, so a td-based selector finds nothing.
     const editLink = page.getByRole('link', { name: 'test-s3-upload', exact: true }).first();
