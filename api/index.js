@@ -37,7 +37,30 @@ let initDone = false;
 
 setup();
 
+function requestPath(event) {
+    if (event.url) return event.url.split('?')[0];
+    if (event.rawPath) return event.rawPath;
+    if (event.path) return event.path;
+    return '/';
+}
+
+function isSensitiveUpload(urlPath) {
+    const lower = urlPath.toLowerCase();
+    if (!lower.startsWith('/wp-content/uploads/')) return false;
+    if (lower.endsWith('/')) return true;
+    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(urlPath);
+}
+
 exports.handler = async function (event, context, callback) {
+    const urlPath = requestPath(event);
+    if (isSensitiveUpload(urlPath)) {
+        return {
+            statusCode: 404,
+            headers: { 'cache-control': 'no-store', 'content-type': 'text/plain' },
+            body: 'Not Found',
+        };
+    }
+
     if (!initDone) {
         // Block mutations before opening SQLite.
         if (readOnlyActive) {
