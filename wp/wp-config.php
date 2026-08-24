@@ -156,10 +156,6 @@ if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
 
 define('WP_DEFAULT_THEME', 'argon');
 
-define('DISABLE_WP_CRON', true);
-define('WP_CRON_LOCK_TIMEOUT', 7200);
-define('WP_POST_REVISIONS', 1);
-
 /* That's all, stop editing! Happy publishing. */
 
 /** Absolute path to the WordPress directory. */
