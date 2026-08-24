@@ -116,15 +116,6 @@ if (isset($headers['injectHost'])) {
 define('WP_SITEURL', 'https://' . $_SERVER['HTTP_HOST']);
 define('WP_HOME', 'https://' . $_SERVER['HTTP_HOST']);
 
-// Optional S3 credentials for file storage.
-if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
-	define( 'AS3CF_SETTINGS', serialize( array(
-        'provider' => 'aws',
-        'access-key-id' => $_ENV['S3_KEY_ID'],
-        'secret-access-key' => $_ENV['S3_ACCESS_KEY'],
-) ) );
-}
-
 // Disable file modification because the changes won't be persisted.
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );

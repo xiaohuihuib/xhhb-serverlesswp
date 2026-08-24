@@ -218,24 +218,6 @@ class ConfigTest extends TestCase
         $this->assertSame('https://cdn.example.com', $config->cdnBaseUrl());
     }
 
-    public function testWpStreamVarsTakePrecedenceOverFallbacks(): void
-    {
-        putenv('SERVERLESSWP_STREAM_S3_BUCKET=primary-bucket');
-        putenv('S3_OFFLOAD_BUCKET=fallback-bucket');
-
-        $config = new Config();
-        $this->assertSame('primary-bucket', $config->s3Bucket());
-    }
-
-    public function testS3OffloadBucketIsLastFallback(): void
-    {
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
-        putenv('S3_OFFLOAD_BUCKET=offload-bucket');
-
-        $config = new Config();
-        $this->assertSame('offload-bucket', $config->s3Bucket());
-    }
-
     public function testForcePathStyleDefaultsToFalse(): void
     {
         $this->unsetEnv('SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE');
@@ -302,9 +284,6 @@ class ConfigTest extends TestCase
             'SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE',
             'SERVERLESSWP_STREAM_S3_ACL',
             'SERVERLESSWP_STREAM_CACHE_CONTROL',
-            'S3_OFFLOAD_BUCKET',
-            'S3_KEY_ID',
-            'S3_ACCESS_KEY',
         ];
     }
 }

@@ -1,6 +1,6 @@
 /**
  * E2E for the wp-content stream wrapper, running through the Docker Lambda
- * image the same way e2e.spec.js and e2e-s3-offload.spec.js do.
+ * image the same way e2e.spec.js does.
  *
  * The plugin has its own E2E suite, but it runs under Apache with mod_php and
  * loads the prepend from a php.ini in conf.d — so the npm package, `php -S`

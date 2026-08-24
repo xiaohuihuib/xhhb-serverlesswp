@@ -41,12 +41,12 @@ class Config
         $this->excludePatterns = $this->read('SERVERLESSWP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
         $this->wpContentDir    = $this->readNullable('SERVERLESSWP_STREAM_WP_CONTENT_DIR');
 
-        $this->s3Bucket         = $this->readFirst(['SERVERLESSWP_STREAM_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
+        $this->s3Bucket         = $this->readFirst(['SERVERLESSWP_STREAM_S3_BUCKET']);
         $this->s3Region         = $this->readFirst(['SERVERLESSWP_STREAM_S3_REGION']) ?? 'us-east-1';
         $this->s3Prefix         = $this->read('SERVERLESSWP_STREAM_S3_PREFIX', '');
         $this->s3Endpoint       = $this->readFirst(['SERVERLESSWP_STREAM_S3_ENDPOINT']);
-        $this->s3Key            = $this->readFirst(['SERVERLESSWP_STREAM_S3_KEY', 'S3_KEY_ID']);
-        $this->s3Secret         = $this->readFirst(['SERVERLESSWP_STREAM_S3_SECRET', 'S3_ACCESS_KEY']);
+        $this->s3Key            = $this->readFirst(['SERVERLESSWP_STREAM_S3_KEY']);
+        $this->s3Secret         = $this->readFirst(['SERVERLESSWP_STREAM_S3_SECRET']);
         $this->s3ForcePathStyle = $this->truthy($this->readFirst(['SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE']));
         $this->s3Acl            = $this->readNullable('SERVERLESSWP_STREAM_S3_ACL');
 

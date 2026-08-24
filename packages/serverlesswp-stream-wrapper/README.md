@@ -54,12 +54,12 @@ All configuration is via environment variables (or PHP constants of the same nam
 
 | Variable | Description |
 |---|---|
-| `SERVERLESSWP_STREAM_S3_BUCKET` | Bucket name (fallback: `S3_OFFLOAD_BUCKET`) |
+| `SERVERLESSWP_STREAM_S3_BUCKET` | Bucket name |
 | `SERVERLESSWP_STREAM_S3_REGION` | Region (default: `us-east-1`) |
 | `SERVERLESSWP_STREAM_S3_PREFIX` | Key prefix within the bucket (optional) |
 | `SERVERLESSWP_STREAM_S3_ENDPOINT` | Custom endpoint URL — use for MinIO/R2 or other S3-compatible stores |
-| `SERVERLESSWP_STREAM_S3_KEY` | Access key ID (fallback: `S3_KEY_ID`). Omit to use the IAM role (recommended on Lambda). |
-| `SERVERLESSWP_STREAM_S3_SECRET` | Secret access key (fallback: `S3_ACCESS_KEY`). Omit to use the IAM role. |
+| `SERVERLESSWP_STREAM_S3_KEY` | Access key ID. Omit to use the IAM role (recommended on Lambda). |
+| `SERVERLESSWP_STREAM_S3_SECRET` | Secret access key. Omit to use the IAM role. |
 | `SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE` | Force path-style addressing even without a custom endpoint |
 | `SERVERLESSWP_STREAM_S3_ACL` | Canned ACL applied to writes, e.g. `public-read` (default: bucket default) |
 

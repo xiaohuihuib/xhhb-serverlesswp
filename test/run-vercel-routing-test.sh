@@ -180,7 +180,7 @@ denied() {
 echo
 echo "Source files (must never be served from the filesystem):"
 for p in /wp/wp-config.php /wp/wp-settings.php /wp/index.php \
-         /wp/wp-content/plugins/amazon-s3-and-cloudfront/wordpress-s3.php \
+         /wp/wp-content/plugins/tidb-compatibility/tidb-compatibility.php \
          /util/readOnly.js /util/install.js /util/directory.js \
          /api/index.js /test/proxy.js /package.json /serverless.yml /netlify.toml; do
     expect_function "$p"

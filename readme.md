@@ -57,9 +57,7 @@ One of the links above will get you started. You'll just need a GitHub account.
 Whichever you choose, you set it up with environment variables. See [here for Vercel](https://vercel.com/docs/concepts/projects/environment-variables) and [here for Netlify](https://docs.netlify.com/environment-variables/overview/) for how to manage them. **Remember to redeploy** your project if you change environment variables after the initial deploy.
 
 ### 3. File and media uploads (optional, can be done later)
-File and media uploads can be enabled using the included WP Offload Media Lite for Amazon S3 plugin, or with the [stream wrapper](#media-uploads-on-vercel-blob). S3 setup details for WP Offload Media can be found [here](https://deliciousbrains.com/wp-offload-media/doc/amazon-s3-quick-start-guide/). The wp-config.php file is set up to use the following environment variables for use by the plugin:
-- S3_KEY_ID
-- S3_ACCESS_KEY
+File and media uploads can be enabled with the [stream wrapper](#media-uploads-on-vercel-blob-or-s3).
 
 ## Media uploads on Vercel Blob or S3
 
