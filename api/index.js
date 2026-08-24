@@ -44,6 +44,54 @@ function requestPath(event) {
     return '/';
 }
 
+const STATIC_EXTENSIONS = new Set([
+    'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp',
+    'woff', 'woff2', 'ttf', 'otf', 'eot', 'txt', 'xml', 'map',
+]);
+
+function setCacheHeaders(event, response) {
+    if (!response?.headers) {
+        return;
+    }
+
+    // Only cache successful GET responses.
+    const method = (event.httpMethod || event.requestContext?.http?.method || 'GET').toUpperCase();
+    if (method !== 'GET' || response.statusCode !== 200) {
+        return;
+    }
+
+    const urlPath = requestPath(event).toLowerCase();
+    // Never cache admin, login, installer, or REST API endpoints.
+    if (
+        urlPath.startsWith('/wp-admin') ||
+        urlPath.startsWith('/wp-login.php') ||
+        urlPath.startsWith('/installer.php') ||
+        urlPath.startsWith('/wp-json/') ||
+        urlPath.includes('/wp-json/')
+    ) {
+        return;
+    }
+
+    const requestCookies = event.headers?.cookie || event.headers?.Cookie || '';
+    const setCookie = response.headers['set-cookie'] || response.headers['Set-Cookie'];
+    if (requestCookies || setCookie) {
+        // Personalized/logged-in responses should not be cached.
+        return;
+    }
+
+    const contentType = response.headers['content-type'] || response.headers['Content-Type'] || '';
+    const ext = urlPath.split('.').pop();
+
+    if (STATIC_EXTENSIONS.has(ext)) {
+        // Static assets can be cached for a year by browsers and CDNs.
+        response.headers['cache-control'] = 'public, max-age=31536000, immutable';
+    } else if (contentType.includes('text/html')) {
+        // HTML pages: browser revalidates immediately, CDN caches for the configured duration.
+        const maxAge = parseInt(process.env.SERVERLESSWP_CACHE_MAX_AGE || '3600', 10);
+        response.headers['cache-control'] = `public, max-age=0, s-maxage=${maxAge}`;
+    }
+}
+
 function isSensitiveUpload(urlPath) {
     const lower = urlPath.toLowerCase();
     if (!lower.startsWith('/wp-content/uploads/')) return false;
@@ -86,6 +134,12 @@ exports.handler = async function (event, context, callback) {
     }
 
     const response = await serverlesswp(options);
+
+    // Apply public cache headers unless read-only mode already handled them.
+    if (!readOnlyActive) {
+        setCacheHeaders(event, response);
+    }
+
     const checkInstall = validate(response);
     return checkInstall || response;
 };
