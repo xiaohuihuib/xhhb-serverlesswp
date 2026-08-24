@@ -111,6 +111,12 @@ for i in $(seq 1 60); do
         echo "Response body (first 1000 chars):"
         echo "$login_body" | head -c 1000
         echo
+        echo "Response headers:"
+        curl -skI --max-time 10 https://localhost:3000/wp-login.php || true
+        echo
+        if echo "$login_body" | grep -qi 'ServerlessWP is installed'; then
+            echo "NOTE: the install wizard was returned instead of wp-login.php; the database backend may not be configured."
+        fi
         echo "Proxy log tail:"
         tail -n 50 "$PROXY_LOG" || true
         exit 1

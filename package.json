@@ -7,12 +7,12 @@
     "@aws-sdk/client-s3": "^3.772.0",
     "@vercel/blob": "^2.3.3",
     "serverlesswp": "^0.6.1",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^5.1.7"
   },
   "engines": {
     "node": "22.x"
   },
   "allowScripts": {
-    "sqlite3@6.0.1": true
+    "sqlite3@5.1.7": true
   }
 }
