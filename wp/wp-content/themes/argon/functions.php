@@ -3195,3 +3195,9 @@ if ( ! function_exists( 'get_cravatar_url' ) ) {
     add_filter( 'bp_gravatar_url', 'get_cravatar_url', 1 );
     add_filter( 'get_avatar_url', 'get_cravatar_url', 1 );
 }
+add_filter( 'http_request_args', function( $args, $url ) {
+    if ( strpos( $url, home_url() ) === 0 ) {
+        $args['sslverify'] = false;
+    }
+    return $args;
+}, 10, 2 );
