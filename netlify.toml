@@ -5,6 +5,9 @@
   from = "/*"
   to = "/.netlify/functions/index/:splat"
   status = 200
+  # Let Netlify serve matching static files from the publish directory directly.
+  # Only fall through to the function when no static asset exists.
+  force = false
 [[headers]]
   for = "/*"
   [headers.values]
