@@ -40,10 +40,6 @@ wget https://downloads.wordpress.org/plugin/amazon-s3-and-cloudfront.zip
 unzip amazon-s3-and-cloudfront.zip
 mv amazon-s3-and-cloudfront wordpress/wp-content/plugins/
 
-git clone --depth 1 https://github.com/WordPress/sqlite-database-integration.git
-cp -rL sqlite-database-integration/packages/plugin-sqlite-database-integration wordpress/wp-content/plugins/sqlite-database-integration
-rm -rf sqlite-database-integration
-
 wget https://downloads.wordpress.org/plugin/tidb-compatibility.zip
 unzip tidb-compatibility
 mv tidb-compatibility wordpress/wp-content/plugins/

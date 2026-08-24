@@ -129,31 +129,6 @@ if (isset($_ENV['S3_KEY_ID']) && isset($_ENV['S3_ACCESS_KEY'])) {
 define('DISALLOW_FILE_EDIT', true );
 define('DISALLOW_FILE_MODS', true );
 
-// If using SQLite (S3 or Vercel Blob) instead of MySQL/MariaDB. Node owns this
-// decision (util/storage.js) and signals it with the header below, which the
-// active plugin strips of any inbound value in preRequest.
-if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
-  define('DB_DIR', '/tmp');
-  // Per-invocation working file so concurrent requests don't share one.
-  define('DB_FILE', basename($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE']));
-  define('DB_NAME', 'wp-sqlite');
-
-  // Force the rollback journal mode. The Node sqlite plugin uploads the
-  // single .sqlite file to remote storage at the end of each request.
-  define('SQLITE_JOURNAL_MODE', 'DELETE');
-
-  // Auto-cron can cause db race conditions on these urls, don't bother with it.
-  if (strpos($_SERVER['REQUEST_URI'], 'wp-admin') !== false || strpos($_SERVER['REQUEST_URI'], 'wp-login') !== false) {
-    define('DISABLE_WP_CRON', true);
-  }
-
-  // Increase time between cron runs (2 hours) to reduce DB writes.
-  define('WP_CRON_LOCK_TIMEOUT', 7200);
-
-  // Limit revisions.
-  define('WP_POST_REVISIONS', 1);
-}
-
 define('WP_DEFAULT_THEME', 'argon');
 
 /* That's all, stop editing! Happy publishing. */

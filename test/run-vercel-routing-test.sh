@@ -180,8 +180,8 @@ denied() {
 echo
 echo "Source files (must never be served from the filesystem):"
 for p in /wp/wp-config.php /wp/wp-settings.php /wp/index.php \
-         /wp/wp-content/plugins/sqlite-database-integration/load.php \
-         /util/sqliteS3.js /util/install.js /util/directory.js \
+         /wp/wp-content/plugins/amazon-s3-and-cloudfront/wordpress-s3.php \
+         /util/readOnly.js /util/install.js /util/directory.js \
          /api/index.js /test/proxy.js /package.json /serverless.yml /netlify.toml; do
     expect_function "$p"
 done
@@ -190,14 +190,14 @@ echo
 echo "The dest-miss fallback (a matched route whose dest does not resolve):"
 # Vercel falls back to resolving the original request path. Under the old
 # config these returned the real source.
-denied /util/sqliteS3.js       util/sqliteS3.js
-denied /wp/util/sqliteS3.js    util/sqliteS3.js
+denied /util/readOnly.js       util/readOnly.js
+denied /wp/util/readOnly.js    util/readOnly.js
 denied /test/test-key.pem      test/test-key.pem
 denied /test/proxy.js          test/proxy.js
 
 echo
 echo "Path traversal (routes match before the path is resolved):"
-denied "/wp-content/../util/sqliteS3.js"    util/sqliteS3.js
+denied "/wp-content/../util/readOnly.js"    util/readOnly.js
 denied "/wp-includes/../../util/install.js" util/install.js
 
 echo

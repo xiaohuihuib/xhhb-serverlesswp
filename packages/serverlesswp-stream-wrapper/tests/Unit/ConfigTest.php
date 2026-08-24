@@ -165,7 +165,6 @@ class ConfigTest extends TestCase
         $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
         $this->unsetEnv('BLOB_READ_WRITE_TOKEN');
         $this->unsetEnv('VERCEL_OIDC_TOKEN');
-        $this->unsetEnv('SQLITE_BLOB_STORE_ID');
         putenv('BLOB_STORE_ID=store_uploads');
 
         $config = new Config('request.oidc.token');
@@ -174,20 +173,10 @@ class ConfigTest extends TestCase
         $this->assertSame('store_uploads', $config->vercelStoreId());
     }
 
-    public function testVercelConfigFallsBackToSharedSqliteStore(): void
-    {
-        $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
-        $this->unsetEnv('BLOB_STORE_ID');
-        putenv('SQLITE_BLOB_STORE_ID=store_database');
-
-        $this->assertSame('store_database', (new Config('request.oidc.token'))->vercelStoreId());
-    }
-
     public function testVercelConfigPrefersExplicitThenPublicStore(): void
     {
         putenv('SERVERLESSWP_STREAM_VERCEL_STORE_ID=store_explicit');
         putenv('BLOB_STORE_ID=store_uploads');
-        putenv('SQLITE_BLOB_STORE_ID=store_database');
         $this->assertSame('store_explicit', (new Config('request.oidc.token'))->vercelStoreId());
 
         $this->unsetEnv('SERVERLESSWP_STREAM_VERCEL_STORE_ID');
@@ -229,31 +218,10 @@ class ConfigTest extends TestCase
         $this->assertSame('https://cdn.example.com', $config->cdnBaseUrl());
     }
 
-    public function testS3SettingsFallBackToSqliteS3Vars(): void
-    {
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_KEY');
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_SECRET');
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_REGION');
-        $this->unsetEnv('SERVERLESSWP_STREAM_S3_ENDPOINT');
-        putenv('SQLITE_S3_BUCKET=slswp-bucket');
-        putenv('SQLITE_S3_API_KEY=slswp-key');
-        putenv('SQLITE_S3_API_SECRET=slswp-secret');
-        putenv('SQLITE_S3_REGION=eu-central-1');
-        putenv('SQLITE_S3_ENDPOINT=https://r2.example.com');
-
-        $config = new Config();
-        $this->assertSame('slswp-bucket', $config->s3Bucket());
-        $this->assertSame('slswp-key', $config->s3Key());
-        $this->assertSame('slswp-secret', $config->s3Secret());
-        $this->assertSame('eu-central-1', $config->s3Region());
-        $this->assertSame('https://r2.example.com', $config->s3Endpoint());
-    }
-
     public function testWpStreamVarsTakePrecedenceOverFallbacks(): void
     {
         putenv('SERVERLESSWP_STREAM_S3_BUCKET=primary-bucket');
-        putenv('SQLITE_S3_BUCKET=fallback-bucket');
+        putenv('S3_OFFLOAD_BUCKET=fallback-bucket');
 
         $config = new Config();
         $this->assertSame('primary-bucket', $config->s3Bucket());
@@ -262,7 +230,6 @@ class ConfigTest extends TestCase
     public function testS3OffloadBucketIsLastFallback(): void
     {
         $this->unsetEnv('SERVERLESSWP_STREAM_S3_BUCKET');
-        $this->unsetEnv('SQLITE_S3_BUCKET');
         putenv('S3_OFFLOAD_BUCKET=offload-bucket');
 
         $config = new Config();
@@ -272,7 +239,6 @@ class ConfigTest extends TestCase
     public function testForcePathStyleDefaultsToFalse(): void
     {
         $this->unsetEnv('SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE');
-        $this->unsetEnv('SQLITE_S3_FORCE_PATH_STYLE');
         $config = new Config();
         $this->assertFalse($config->s3ForcePathStyle());
     }
@@ -331,18 +297,11 @@ class ConfigTest extends TestCase
             'SERVERLESSWP_STREAM_VERCEL_STORE_ID',
             'BLOB_READ_WRITE_TOKEN',
             'BLOB_STORE_ID',
-            'SQLITE_BLOB_STORE_ID',
             'VERCEL_OIDC_TOKEN',
             'SERVERLESSWP_STREAM_CDN_BASE_URL',
             'SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE',
             'SERVERLESSWP_STREAM_S3_ACL',
             'SERVERLESSWP_STREAM_CACHE_CONTROL',
-            'SQLITE_S3_BUCKET',
-            'SQLITE_S3_API_KEY',
-            'SQLITE_S3_API_SECRET',
-            'SQLITE_S3_REGION',
-            'SQLITE_S3_ENDPOINT',
-            'SQLITE_S3_FORCE_PATH_STYLE',
             'S3_OFFLOAD_BUCKET',
             'S3_KEY_ID',
             'S3_ACCESS_KEY',

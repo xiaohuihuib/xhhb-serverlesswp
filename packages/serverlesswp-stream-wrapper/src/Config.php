@@ -41,13 +41,13 @@ class Config
         $this->excludePatterns = $this->read('SERVERLESSWP_STREAM_EXCLUDE_PATTERNS', '*.sqlite,*.db,*.php,*.log,.htaccess');
         $this->wpContentDir    = $this->readNullable('SERVERLESSWP_STREAM_WP_CONTENT_DIR');
 
-        $this->s3Bucket         = $this->readFirst(['SERVERLESSWP_STREAM_S3_BUCKET', 'SQLITE_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
-        $this->s3Region         = $this->readFirst(['SERVERLESSWP_STREAM_S3_REGION', 'SQLITE_S3_REGION']) ?? 'us-east-1';
+        $this->s3Bucket         = $this->readFirst(['SERVERLESSWP_STREAM_S3_BUCKET', 'S3_OFFLOAD_BUCKET']);
+        $this->s3Region         = $this->readFirst(['SERVERLESSWP_STREAM_S3_REGION']) ?? 'us-east-1';
         $this->s3Prefix         = $this->read('SERVERLESSWP_STREAM_S3_PREFIX', '');
-        $this->s3Endpoint       = $this->readFirst(['SERVERLESSWP_STREAM_S3_ENDPOINT', 'SQLITE_S3_ENDPOINT']);
-        $this->s3Key            = $this->readFirst(['SERVERLESSWP_STREAM_S3_KEY', 'SQLITE_S3_API_KEY', 'S3_KEY_ID']);
-        $this->s3Secret         = $this->readFirst(['SERVERLESSWP_STREAM_S3_SECRET', 'SQLITE_S3_API_SECRET', 'S3_ACCESS_KEY']);
-        $this->s3ForcePathStyle = $this->truthy($this->readFirst(['SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE', 'SQLITE_S3_FORCE_PATH_STYLE']));
+        $this->s3Endpoint       = $this->readFirst(['SERVERLESSWP_STREAM_S3_ENDPOINT']);
+        $this->s3Key            = $this->readFirst(['SERVERLESSWP_STREAM_S3_KEY', 'S3_KEY_ID']);
+        $this->s3Secret         = $this->readFirst(['SERVERLESSWP_STREAM_S3_SECRET', 'S3_ACCESS_KEY']);
+        $this->s3ForcePathStyle = $this->truthy($this->readFirst(['SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE']));
         $this->s3Acl            = $this->readNullable('SERVERLESSWP_STREAM_S3_ACL');
 
         $this->cacheControl = $this->read('SERVERLESSWP_STREAM_CACHE_CONTROL', 'public, max-age=3600, s-maxage=86400');
@@ -64,7 +64,6 @@ class Config
         $this->vercelStoreId = $this->readFirst([
             'SERVERLESSWP_STREAM_VERCEL_STORE_ID',
             'BLOB_STORE_ID',
-            'SQLITE_BLOB_STORE_ID',
         ]);
         $this->vercelAccess       = $this->read('SERVERLESSWP_STREAM_VERCEL_ACCESS', 'public');
         $this->vercelApiBase      = $this->readNullable('SERVERLESSWP_STREAM_VERCEL_API_BASE');

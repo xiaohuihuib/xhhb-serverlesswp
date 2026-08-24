@@ -54,16 +54,14 @@ All configuration is via environment variables (or PHP constants of the same nam
 
 | Variable | Description |
 |---|---|
-| `SERVERLESSWP_STREAM_S3_BUCKET` | Bucket name (fallback: `SQLITE_S3_BUCKET`, `S3_OFFLOAD_BUCKET`) |
-| `SERVERLESSWP_STREAM_S3_REGION` | Region (fallback: `SQLITE_S3_REGION`; default: `us-east-1`) |
+| `SERVERLESSWP_STREAM_S3_BUCKET` | Bucket name (fallback: `S3_OFFLOAD_BUCKET`) |
+| `SERVERLESSWP_STREAM_S3_REGION` | Region (default: `us-east-1`) |
 | `SERVERLESSWP_STREAM_S3_PREFIX` | Key prefix within the bucket (optional) |
-| `SERVERLESSWP_STREAM_S3_ENDPOINT` | Custom endpoint URL — use for MinIO/R2 or other S3-compatible stores (fallback: `SQLITE_S3_ENDPOINT`) |
-| `SERVERLESSWP_STREAM_S3_KEY` | Access key ID (fallback: `SQLITE_S3_API_KEY`, `S3_KEY_ID`). Omit to use the IAM role (recommended on Lambda). |
-| `SERVERLESSWP_STREAM_S3_SECRET` | Secret access key (fallback: `SQLITE_S3_API_SECRET`, `S3_ACCESS_KEY`). Omit to use the IAM role. |
-| `SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE` | Force path-style addressing even without a custom endpoint (fallback: `SQLITE_S3_FORCE_PATH_STYLE`) |
+| `SERVERLESSWP_STREAM_S3_ENDPOINT` | Custom endpoint URL — use for MinIO/R2 or other S3-compatible stores |
+| `SERVERLESSWP_STREAM_S3_KEY` | Access key ID (fallback: `S3_KEY_ID`). Omit to use the IAM role (recommended on Lambda). |
+| `SERVERLESSWP_STREAM_S3_SECRET` | Secret access key (fallback: `S3_ACCESS_KEY`). Omit to use the IAM role. |
+| `SERVERLESSWP_STREAM_S3_FORCE_PATH_STYLE` | Force path-style addressing even without a custom endpoint |
 | `SERVERLESSWP_STREAM_S3_ACL` | Canned ACL applied to writes, e.g. `public-read` (default: bucket default) |
-
-The `SQLITE_S3_*` / `S3_*` fallbacks match the variables [ServerlessWP](https://serverlesswp.com) users already configure, so a typical SQLite+S3 site only needs `SERVERLESSWP_STREAM_PROVIDER=s3`.
 
 ### Vercel Blob
 
@@ -72,7 +70,7 @@ The adapter speaks the same wire protocol as the official `@vercel/blob` JS SDK 
 | Variable | Description |
 |---|---|
 | `SERVERLESSWP_STREAM_VERCEL_TOKEN` | Optional explicit Blob read/write or OIDC token. Falls back to `BLOB_READ_WRITE_TOKEN`, the request's `x-vercel-oidc-token`, then `VERCEL_OIDC_TOKEN`. |
-| `SERVERLESSWP_STREAM_VERCEL_STORE_ID` | Optional explicit store ID. Falls back to `BLOB_STORE_ID`, then `SQLITE_BLOB_STORE_ID` for a store shared with the SQLite database. |
+| `SERVERLESSWP_STREAM_VERCEL_STORE_ID` | Optional explicit store ID. Falls back to `BLOB_STORE_ID`. |
 | `SERVERLESSWP_STREAM_VERCEL_ACCESS` | Store access mode, `public` (default) or `private`; shapes the download host |
 | `SERVERLESSWP_STREAM_VERCEL_API_BASE` | Override the Blob API base URL (tests/emulator) |
 | `SERVERLESSWP_STREAM_VERCEL_DOWNLOAD_BASE` | Override the blob download base URL (tests/emulator) |
@@ -139,8 +137,8 @@ Other plugins can override the routing decision for any individual path:
 
 ```php
 add_filter('serverlesswp_stream_wrapper_use_remote', function (bool $useRemote, string $path): bool {
-    // Keep SQLite databases local (also excluded by default)
-    if (str_ends_with($path, '.sqlite')) {
+    // Keep private exports local (also excluded by default)
+    if (str_contains($path, '/wp-content/private/')) {
         return false;
     }
     return $useRemote;
