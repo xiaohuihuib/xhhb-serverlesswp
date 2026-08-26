@@ -2,9 +2,22 @@ service: serverlesswp-wordpress-starter
 
 provider:
   name: aws
-  runtime: nodejs22.x
+  runtime: nodejs24.x
   httpApi:
     payload: '2.0'
+
+package:
+  patterns:
+    # Exclude large/unnecessary items to keep the bundle size reasonable.
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!test/**'
+    - '!wp-public/**'
+    - '!wp/wp-content/uploads/**'
+    - '!assets/**'
+    # Ensure the PHP binary shipped by serverlesswp is included in the bundle.
+    # Serverless' dependency analysis may miss files that are only used at runtime by spawn().
+    - 'node_modules/serverlesswp/php-files/**'
 
 functions:
   requestHandler:

@@ -9,24 +9,21 @@ const assert = require('node:assert');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-const sqlite3 = require('sqlite3').verbose();
+const { DatabaseSync } = require('node:sqlite');
 
 const sqliteS3 = require('../util/sqliteS3.js');
 
 const ETAG_CACHE = '/tmp/etag.txt';
 const CACHE_FILE = '/tmp/wp-sqlite-cache.sqlite';
 
-// Build a small valid SQLite db file in memory and return its bytes.
+// Build a small valid SQLite db file and return its bytes.
 async function buildDbBytes(seedRow) {
     const tmp = path.join(os.tmpdir(), `seed-${Date.now()}-${Math.random()}.sqlite`);
-    await new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(tmp);
-        db.serialize(() => {
-            db.run('CREATE TABLE t (v TEXT)');
-            db.run('INSERT INTO t VALUES (?)', [seedRow], (err) => err ? reject(err) : null);
-            db.close((err) => err ? reject(err) : resolve());
-        });
-    });
+    const db = new DatabaseSync(tmp);
+    db.exec('CREATE TABLE t (v TEXT)');
+    const insert = db.prepare('INSERT INTO t VALUES (?)');
+    insert.run(seedRow);
+    db.close();
     const bytes = await fs.readFile(tmp);
     await fs.unlink(tmp);
     return bytes;
@@ -111,13 +108,10 @@ class PutObjectCommand { constructor(input) { this.input = input; } }
 // increments when another connection commits, which is how PHP's writes look
 // to the Node-held handle in production.
 function insertRow(dbPath, value) {
-    return new Promise((resolve, reject) => {
-        const writer = new sqlite3.Database(dbPath);
-        writer.run('INSERT INTO t VALUES (?)', [value], (err) => {
-            if (err) return reject(err);
-            writer.close(() => resolve());
-        });
-    });
+    const writer = new DatabaseSync(dbPath);
+    const insert = writer.prepare('INSERT INTO t VALUES (?)');
+    insert.run(value);
+    writer.close();
 }
 
 async function cleanupTmp() {
@@ -176,13 +170,10 @@ test('concurrent writes do not corrupt each other; S3 arbitrates via ETag', asyn
         // Mutate via a *separate* connection — PRAGMA data_version only
         // increments when another connection commits. (In prod, PHP writes
         // through its own connection while Node holds ctx.db.)
-        await new Promise((resolve, reject) => {
-            const writer = new sqlite3.Database(ctx.workingPath);
-            writer.run('INSERT INTO t VALUES (?)', ['row-' + i], (err) => {
-                if (err) return reject(err);
-                writer.close(() => resolve());
-            });
-        });
+        const writer = new DatabaseSync(ctx.workingPath);
+        const insert = writer.prepare('INSERT INTO t VALUES (?)');
+        insert.run('row-' + i);
+        writer.close();
         await sqliteS3.postRequest(event, {});
     }));
 
@@ -200,13 +191,9 @@ test('concurrent writes do not corrupt each other; S3 arbitrates via ETag', asyn
     // Verify the canonical S3 body is a valid SQLite file (not corrupt).
     const verifyPath = '/tmp/sqliteS3-test-verify.sqlite';
     await fs.writeFile(verifyPath, state.body);
-    const rows = await new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(verifyPath);
-        db.all('SELECT v FROM t', (err, rows) => {
-            if (err) return reject(err);
-            db.close(() => resolve(rows));
-        });
-    });
+    const db = new DatabaseSync(verifyPath);
+    const rows = db.prepare('SELECT v FROM t').all();
+    db.close();
     await fs.unlink(verifyPath);
     assert.ok(rows.length >= 1, 'final S3 body is a valid SQLite db with rows');
 });
@@ -226,13 +213,9 @@ test('412 on PUT returns retry response and does not refresh local cache', async
     const cacheBefore = await fs.readFile(CACHE_FILE);
     const etagBefore = await fs.readFile(ETAG_CACHE, 'utf8');
 
-    await new Promise((resolve, reject) => {
-        const writer = new sqlite3.Database(ctx.workingPath);
-        writer.run('INSERT INTO t VALUES (?)', ['conflict'], (err) => {
-            if (err) return reject(err);
-            writer.close(() => resolve());
-        });
-    });
+    const writer = new DatabaseSync(ctx.workingPath);
+    writer.prepare('INSERT INTO t VALUES (?)').run('conflict');
+    writer.close();
 
     const result = await sqliteS3.postRequest(event, {});
     assert.ok(result, 'postRequest returned an error response');
@@ -331,9 +314,7 @@ test('module state is not shared between concurrent requests', async () => {
     // Mutate B; A's data_version (captured at preRequest) should not change
     // out from under it.
     const aVersionBefore = a[ctxKey].dataVersion;
-    await new Promise((resolve, reject) => {
-        b[ctxKey].db.run('INSERT INTO t VALUES (?)', ['from-b'], (err) => err ? reject(err) : resolve());
-    });
+    b[ctxKey].db.prepare('INSERT INTO t VALUES (?)').run('from-b');
     assert.strictEqual(a[ctxKey].dataVersion, aVersionBefore, 'A\'s captured dataVersion is unaffected by B');
 
     await sqliteS3.postRequest(a, {});
@@ -432,9 +413,7 @@ test('a data_version failure returns an error instead of the WordPress success r
 
     // A closed handle makes PRAGMA data_version fail, standing in for any
     // unexpected SQLite error at the change-detection boundary.
-    await new Promise((resolve, reject) => {
-        ctx.db.close((err) => err ? reject(err) : resolve());
-    });
+    ctx.db.close();
 
     const result = await sqliteS3.postRequest(event, { statusCode: 200, body: 'saved' });
     assert.strictEqual(result.statusCode, 500);

@@ -1,4 +1,4 @@
-const sqlite3 = require('sqlite3').verbose();
+const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs').promises;
 const { randomUUID } = require('crypto');
 const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -115,7 +115,7 @@ exports.preRequest = async function(event) {
 
     if (await exists(CACHE_FILE)) {
         await fs.copyFile(CACHE_FILE, ctx.workingPath);
-        ctx.db = new sqlite3.Database(ctx.workingPath);
+        ctx.db = new DatabaseSync(ctx.workingPath);
         ctx.dataVersion = await getDataVersion(ctx.db);
     }
 }
@@ -133,7 +133,7 @@ exports.postRequest = async function(event, response) {
             return persistenceError();
         }
         if (!ctx.db) {
-            ctx.db = new sqlite3.Database(ctx.workingPath);
+            ctx.db = new DatabaseSync(ctx.workingPath);
             ctx.dataVersion = null;
         }
 
@@ -242,40 +242,28 @@ async function setEtag(newEtag) {
   }
 
 async function getDataVersion(db) {
-    return new Promise((resolve, reject) => {
-        if (!db) { return reject('No db') }
-        try {
-            db.get("PRAGMA data_version", (err, row) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(row['data_version']);
-                }
-            });
-        }
-        catch (err) {
-            reject(err);
-        }
-
-    });
+    if (!db) {
+        throw new Error('No db');
+    }
+    try {
+        const row = db.prepare('PRAGMA data_version').get();
+        return row.data_version;
+    }
+    catch (err) {
+        throw err;
+    }
 }
 
 async function dbClose(db) {
-    return new Promise((resolve, reject) => {
-        if (!db) { return reject('No db') }
-        try {
-            db.close((closeErr) => {
-                if (closeErr) {
-                    reject(closeErr);
-                }
-                resolve();
-            });
-        }
-        catch (err) {
-            reject(err);
-        }
-
-    });
+    if (!db) {
+        throw new Error('No db');
+    }
+    try {
+        db.close();
+    }
+    catch (err) {
+        throw err;
+    }
 }
 
 async function exists(path) {

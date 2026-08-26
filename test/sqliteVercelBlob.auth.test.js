@@ -11,7 +11,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const { Readable } = require('node:stream');
-const sqlite3 = require('sqlite3').verbose();
+const { DatabaseSync } = require('node:sqlite');
 
 const sqliteVercelBlob = require('../util/sqliteVercelBlob.js');
 
@@ -21,14 +21,10 @@ const CTX_KEY = Symbol.for('serverlesswp.sqliteVercelBlob.context');
 
 async function buildDbBytes() {
     const tmp = path.join(os.tmpdir(), `auth-seed-${Date.now()}-${Math.random()}.sqlite`);
-    await new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(tmp);
-        db.serialize(() => {
-            db.run('CREATE TABLE t (v TEXT)');
-            db.run('INSERT INTO t VALUES (?)', ['seed'], (err) => err ? reject(err) : null);
-            db.close((err) => err ? reject(err) : resolve());
-        });
-    });
+    const db = new DatabaseSync(tmp);
+    db.exec('CREATE TABLE t (v TEXT)');
+    db.prepare('INSERT INTO t VALUES (?)').run('seed');
+    db.close();
     const bytes = await fs.readFile(tmp);
     await fs.unlink(tmp);
     return bytes;
@@ -37,13 +33,9 @@ async function buildDbBytes() {
 // A write through a second connection, so PRAGMA data_version moves and the
 // plugin decides it has changes to save - the same shape as PHP's writes.
 function insertRow(dbPath) {
-    return new Promise((resolve, reject) => {
-        const writer = new sqlite3.Database(dbPath);
-        writer.run('INSERT INTO t VALUES (?)', ['written'], (err) => {
-            if (err) return reject(err);
-            writer.close(() => resolve());
-        });
-    });
+    const writer = new DatabaseSync(dbPath);
+    writer.prepare('INSERT INTO t VALUES (?)').run('written');
+    writer.close();
 }
 
 // Records the options each call was made with.

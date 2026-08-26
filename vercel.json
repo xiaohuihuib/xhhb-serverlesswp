@@ -19,7 +19,8 @@
   "functions": {
     "api/vercel.js": {
       "includeFiles": "wp/**",
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs24.x"
     }
   },
   "build": {

@@ -10,7 +10,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const { Readable } = require('node:stream');
-const sqlite3 = require('sqlite3').verbose();
+const { DatabaseSync } = require('node:sqlite');
 const { BlobPreconditionFailedError, BlobNotFoundError } = require('@vercel/blob');
 
 const sqliteVercelBlob = require('../util/sqliteVercelBlob.js');
@@ -22,14 +22,10 @@ const CTX_KEY = Symbol.for('serverlesswp.sqliteVercelBlob.context');
 // Build a small valid SQLite db file and return its bytes.
 async function buildDbBytes(seedRow) {
     const tmp = path.join(os.tmpdir(), `seed-${Date.now()}-${Math.random()}.sqlite`);
-    await new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(tmp);
-        db.serialize(() => {
-            db.run('CREATE TABLE t (v TEXT)');
-            db.run('INSERT INTO t VALUES (?)', [seedRow], (err) => err ? reject(err) : null);
-            db.close((err) => err ? reject(err) : resolve());
-        });
-    });
+    const db = new DatabaseSync(tmp);
+    db.exec('CREATE TABLE t (v TEXT)');
+    db.prepare('INSERT INTO t VALUES (?)').run(seedRow);
+    db.close();
     const bytes = await fs.readFile(tmp);
     await fs.unlink(tmp);
     return bytes;
@@ -39,13 +35,9 @@ async function buildDbBytes(seedRow) {
 // increments when another connection commits, which is how PHP's writes look
 // to the Node-held handle in production.
 function insertRow(dbPath, value) {
-    return new Promise((resolve, reject) => {
-        const writer = new sqlite3.Database(dbPath);
-        writer.run('INSERT INTO t VALUES (?)', [value], (err) => {
-            if (err) return reject(err);
-            writer.close(() => resolve());
-        });
-    });
+    const writer = new DatabaseSync(dbPath);
+    writer.prepare('INSERT INTO t VALUES (?)').run(value);
+    writer.close();
 }
 
 // Mimics the store behavior the plugin depends on: downloads report the weak
@@ -230,9 +222,7 @@ test('a data_version failure returns an error instead of the WordPress success r
     const ctx = event[CTX_KEY];
     await insertRow(ctx.workingPath, 'not-persisted');
 
-    await new Promise((resolve, reject) => {
-        ctx.db.close((err) => err ? reject(err) : resolve());
-    });
+    ctx.db.close();
 
     const result = await sqliteVercelBlob.postRequest(event, { statusCode: 200, body: 'saved' });
     assert.strictEqual(result.statusCode, 500);
