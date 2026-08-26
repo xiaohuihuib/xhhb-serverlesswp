@@ -5,7 +5,6 @@ const serverlesswp = require('serverlesswp');
 const { validate } = require('../util/install.js');
 const { setup } = require('../util/directory.js');
 const storage = require('../util/storage.js');
-const sandbox = require('../util/sandbox.js');
 const readOnly = require('../util/readOnly.js');
 
 const pathToWP = '/tmp/wp';
