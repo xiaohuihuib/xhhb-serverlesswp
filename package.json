@@ -4,7 +4,6 @@
   "description": "",
   "license": "MIT",
   "dependencies": {
-    "@vercel/blob": "^2.3.3",
     "serverlesswp": "^0.6.1"
   },
   "engines": {
