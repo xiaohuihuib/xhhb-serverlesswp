@@ -98,6 +98,9 @@ public_body=${public_body%$'\n'}
     echo
     echo "Proxy log tail:"
     tail -n 50 "$PROXY_LOG" || true
+    echo
+    echo "Lambda container logs:"
+    docker logs serverlesswp-test 2>&1 | tail -n 50 || true
     exit 1
 }
 [[ "$public_body" == "public-upload" ]] || {
@@ -108,6 +111,9 @@ public_body=${public_body%$'\n'}
     echo
     echo "Proxy log tail:"
     tail -n 50 "$PROXY_LOG" || true
+    echo
+    echo "Lambda container logs:"
+    docker logs serverlesswp-test 2>&1 | tail -n 50 || true
     exit 1
 }
 echo "Sensitive upload policy test passed."

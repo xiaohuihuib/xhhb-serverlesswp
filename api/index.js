@@ -189,6 +189,7 @@ const UPLOADS_MIME = {
 // and avoids PHP's built-in server falling back to wp-content/index.php when a
 // file is missing or unreadable.
 function serveUploadStatic(urlPath) {
+    console.log('[serveUploadStatic] urlPath:', urlPath, 'streamWrapperActive:', streamWrapperActive);
     if (streamWrapperActive) return null;
 
     const lower = urlPath.toLowerCase();
@@ -197,7 +198,10 @@ function serveUploadStatic(urlPath) {
     if (isSensitiveUpload(urlPath)) return null;
 
     const filePath = path.resolve(pathToWP, '.' + urlPath);
-    if (!filePath.startsWith(pathToWP + path.sep) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    const exists = fs.existsSync(filePath);
+    const isFile = exists && fs.statSync(filePath).isFile();
+    console.log('[serveUploadStatic] filePath:', filePath, 'exists:', exists, 'isFile:', isFile);
+    if (!filePath.startsWith(pathToWP + path.sep) || !exists || !isFile) {
         return null;
     }
 
@@ -209,6 +213,7 @@ function serveUploadStatic(urlPath) {
         || contentType === 'application/xml'
         || contentType === 'application/json';
 
+    console.log('[serveUploadStatic] serving', data.length, 'bytes');
     return {
         statusCode: 200,
         headers: {
