@@ -38,8 +38,14 @@ let initDone = false;
 setup();
 
 function requestPath(event) {
-    let url = event.url || event.rawPath || event.path || '/';
-    // Some platforms pass the full URL in event.url; normalize to the path.
+    let url =
+        event.url ||
+        event.rawPath ||
+        event.path ||
+        event.requestContext?.http?.path ||
+        event.requestContext?.path ||
+        '/';
+    // Some platforms pass the full URL; normalize to the path.
     if (typeof url === 'string' && url.startsWith('http')) {
         try {
             url = new URL(url).pathname;
@@ -99,10 +105,17 @@ function setCacheHeaders(event, response) {
 }
 
 function isSensitiveUpload(urlPath) {
-    const lower = urlPath.toLowerCase();
+    // Defensive: some gateways URL-encode the path or pass the full URL.
+    let decoded;
+    try {
+        decoded = decodeURIComponent(urlPath);
+    } catch (e) {
+        decoded = urlPath;
+    }
+    const lower = decoded.toLowerCase();
     if (!lower.startsWith('/wp-content/uploads/')) return false;
     if (lower.endsWith('/')) return true;
-    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(urlPath);
+    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(decoded);
 }
 
 exports.handler = async function (event, context, callback) {
