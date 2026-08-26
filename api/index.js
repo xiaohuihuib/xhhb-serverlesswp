@@ -1,20 +1,23 @@
 const fs = require('fs');
+const path = require('path');
 const serverlesswp = require('serverlesswp');
 
 const { validate } = require('../util/install.js');
 const { setup } = require('../util/directory.js');
 const storage = require('../util/storage.js');
+const sandbox = require('../util/sandbox.js');
 const readOnly = require('../util/readOnly.js');
 
 const pathToWP = '/tmp/wp';
 const wpContentPath = pathToWP + '/wp-content';
+const sqlitePluginPath = wpContentPath + '/plugins/sqlite-database-integration';
 
 const database = storage.resolve();
 
 // Load executable bootstrap only from the read-only bundle.
 const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/bootstrap/prepend.php';
 
-const requestRouter = '/var/task/wp/router.php';
+const requestRouter = '/tmp/serverlesswp-router.php';
 
 const streamWrapperActive = !!process.env['SERVERLESSWP_STREAM_PROVIDER']
     && fs.existsSync(streamWrapperPrepend);
@@ -35,11 +38,70 @@ let initDone = false;
 
 setup();
 
+// PHP's built-in server, when asked for a missing file under /wp-content/uploads/,
+// walks up the tree and executes wp-content/index.php (empty body, 200). A router
+// script keeps uploads safe and returns a clean 404 for missing files. Generated
+// under /tmp so no file has to be placed inside the read-only wp/ bundle.
+const routerPhp = `<?php
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$lowerUri = strtolower($uri);
+$uploadsPrefix = '/wp-content/uploads/';
+
+if (strpos($lowerUri, $uploadsPrefix) === 0) {
+    if (substr($lowerUri, -1) === '/') {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+
+    if (preg_match('/\\.(php|sql|sqlite3?|db|log|env|ini)$/i', $uri)) {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+
+    $file = $_SERVER['DOCUMENT_ROOT'] . $uri;
+    if (is_file($file)) {
+        return false;
+    }
+
+    http_response_code(404);
+    header('Cache-Control: no-store');
+    echo 'Not Found';
+    return true;
+}
+
+return false;
+`;
+
+if (!streamWrapperActive && !fs.existsSync(requestRouter)) {
+    try {
+        fs.writeFileSync(requestRouter, routerPhp);
+    } catch (e) {
+        console.log('Could not write upload router script:', e);
+    }
+}
+
 function requestPath(event) {
-    if (event.url) return event.url.split('?')[0];
-    if (event.rawPath) return event.rawPath;
-    if (event.path) return event.path;
-    return '/';
+    // Prefer explicit path fields; fall back to event.url for Vercel-style events.
+    let url =
+        event.rawPath ||
+        event.path ||
+        event.requestContext?.http?.path ||
+        event.requestContext?.path ||
+        event.url ||
+        '/';
+    // Some platforms pass the full URL; normalize to the path.
+    if (typeof url === 'string' && url.startsWith('http')) {
+        try {
+            url = new URL(url).pathname;
+        } catch (e) {
+            // fall through to best-effort split below
+        }
+    }
+    return url.split('?')[0];
 }
 
 const STATIC_EXTENSIONS = new Set([
@@ -91,10 +153,73 @@ function setCacheHeaders(event, response) {
 }
 
 function isSensitiveUpload(urlPath) {
-    const lower = urlPath.toLowerCase();
+    // Defensive: some gateways URL-encode the path or pass the full URL.
+    let decoded;
+    try {
+        decoded = decodeURIComponent(urlPath);
+    } catch (e) {
+        decoded = urlPath;
+    }
+    const lower = decoded.toLowerCase();
     if (!lower.startsWith('/wp-content/uploads/')) return false;
     if (lower.endsWith('/')) return true;
-    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(urlPath);
+    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(decoded);
+}
+
+const UPLOADS_MIME = {
+    '.txt': 'text/plain',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.ico': 'image/x-icon',
+    '.pdf': 'application/pdf',
+    '.mp4': 'video/mp4',
+    '.mp3': 'audio/mpeg',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.xml': 'application/xml',
+    '.json': 'application/json',
+};
+
+// Serve upload files directly from the local filesystem when the stream wrapper
+// is not active. This mirrors how a real web server serves /wp-content/uploads/
+// and avoids PHP's built-in server falling back to wp-content/index.php when a
+// file is missing or unreadable.
+function serveUploadStatic(urlPath) {
+    if (streamWrapperActive) return null;
+
+    const lower = urlPath.toLowerCase();
+    if (!lower.startsWith('/wp-content/uploads/')) return null;
+    if (lower.endsWith('/')) return null;
+    if (isSensitiveUpload(urlPath)) return null;
+
+    const filePath = path.resolve(pathToWP, '.' + urlPath);
+    const exists = fs.existsSync(filePath);
+    const isFile = exists && fs.statSync(filePath).isFile();
+    if (!filePath.startsWith(pathToWP + path.sep) || !exists || !isFile) {
+        return null;
+    }
+
+    const ext = path.extname(urlPath).toLowerCase();
+    const contentType = UPLOADS_MIME[ext] || 'application/octet-stream';
+    const data = fs.readFileSync(filePath);
+    const isText = contentType.startsWith('text/')
+        || contentType === 'application/javascript'
+        || contentType === 'application/xml'
+        || contentType === 'application/json';
+
+    return {
+        statusCode: 200,
+        headers: {
+            'content-type': contentType,
+            'cache-control': 'public, max-age=31536000, immutable',
+        },
+        body: isText ? data.toString('utf8') : data.toString('base64'),
+        isBase64Encoded: !isText,
+    };
 }
 
 exports.handler = async function (event, context) {
@@ -107,9 +232,23 @@ exports.handler = async function (event, context) {
         };
     }
 
+    const directUpload = serveUploadStatic(urlPath);
+    if (directUpload) {
+        return directUpload;
+    }
+
     if (!initDone) {
+        // Block mutations before opening SQLite.
         if (readOnlyActive) {
             serverlesswp.registerPlugin(readOnly);
+        }
+        if (database.plugin) {
+            await database.plugin.prepPlugin(wpContentPath, sqlitePluginPath);
+            database.plugin.config(database.config);
+            serverlesswp.registerPlugin(database.plugin);
+        }
+        if (process.env['SERVERLESSWP_DATA_SECRET']) {
+            serverlesswp.registerPlugin(sandbox);
         }
         initDone = true;
     }

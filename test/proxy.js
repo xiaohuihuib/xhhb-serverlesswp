@@ -48,6 +48,13 @@ const STATIC_MIME = {
 // short, and no other spec should pay for this.
 const FALLTHROUGH_HEADER = 'x-serverlesswp-stream-wrapper-fallthrough';
 
+function isSensitiveUpload(urlPath) {
+    const lower = urlPath.toLowerCase();
+    if (!lower.startsWith('/wp-content/uploads/')) return false;
+    if (lower.endsWith('/')) return true;
+    return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(urlPath);
+}
+
 function canFallThrough(urlPath, req) {
     return req.headers[FALLTHROUGH_HEADER] === '1' && urlPath.startsWith('/wp-content/');
 }
@@ -105,6 +112,15 @@ function decompress(buf, encoding) {
 https.createServer(ssl, (req, res) => {
     const [urlPath, qs] = req.url.split('?');
     const ext = path.extname(urlPath).toLowerCase();
+
+    // Block sensitive uploads before they ever reach PHP/Lambda.
+    if (isSensitiveUpload(urlPath)) {
+        res.statusCode = 404;
+        res.setHeader('cache-control', 'no-store');
+        res.setHeader('content-type', 'text/plain');
+        res.end('Not Found');
+        return;
+    }
 
     // Serve static files directly — no Lambda needed.
     if (ext in STATIC_MIME && !urlPath.endsWith('.php')) {
