@@ -1,7 +1,7 @@
 name: e2e Tests
 on:
   push:
-    branches: [main]
+    branches: [nosqlite]
   pull_request:
 jobs:
   routing:
