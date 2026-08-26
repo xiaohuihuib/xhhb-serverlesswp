@@ -18,6 +18,7 @@ COPY api/ ${LAMBDA_TASK_ROOT}/api/
 COPY util/ ${LAMBDA_TASK_ROOT}/util/
 COPY wp/ ${LAMBDA_TASK_ROOT}/wp/
 COPY test/installer.php ${LAMBDA_TASK_ROOT}/wp/
+COPY test/router.php ${LAMBDA_TASK_ROOT}/wp/
 COPY test/stream-wrapper-probe.php ${LAMBDA_TASK_ROOT}/wp/
 COPY test/stream-wrapper-wp-probe.php ${LAMBDA_TASK_ROOT}/wp/
 COPY test/minio-offload.php ${LAMBDA_TASK_ROOT}/wp/wp-content/mu-plugins/

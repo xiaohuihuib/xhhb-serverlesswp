@@ -38,10 +38,16 @@ let initDone = false;
 setup();
 
 function requestPath(event) {
-    if (event.url) return event.url.split('?')[0];
-    if (event.rawPath) return event.rawPath;
-    if (event.path) return event.path;
-    return '/';
+    let url = event.url || event.rawPath || event.path || '/';
+    // Some platforms pass the full URL in event.url; normalize to the path.
+    if (typeof url === 'string' && url.startsWith('http')) {
+        try {
+            url = new URL(url).pathname;
+        } catch (e) {
+            // fall through to best-effort split below
+        }
+    }
+    return url.split('?')[0];
 }
 
 const STATIC_EXTENSIONS = new Set([
