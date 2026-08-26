@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:22
+FROM public.ecr.aws/lambda/nodejs:24
 
 COPY package.json package-lock.json ${LAMBDA_TASK_ROOT}/
 RUN npm ci --omit=optional --omit=dev
