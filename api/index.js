@@ -38,12 +38,13 @@ let initDone = false;
 setup();
 
 function requestPath(event) {
+    // Prefer explicit path fields; fall back to event.url for Vercel-style events.
     let url =
-        event.url ||
         event.rawPath ||
         event.path ||
         event.requestContext?.http?.path ||
         event.requestContext?.path ||
+        event.url ||
         '/';
     // Some platforms pass the full URL; normalize to the path.
     if (typeof url === 'string' && url.startsWith('http')) {
