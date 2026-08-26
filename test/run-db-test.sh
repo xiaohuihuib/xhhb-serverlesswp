@@ -76,14 +76,39 @@ docker exec serverlesswp-test sh -c "printf '%s' '<?php echo \"INDEX-EXECUTED\";
 index_status=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/php-index/")
 [[ "$index_status" == "404" ]] || { echo "Sensitive upload PHP index FAILED: expected 404, got $index_status"; exit 1; }
 docker exec serverlesswp-test sh -c "printf '%s' 'public-upload' > '${policy_dir}/public.txt'"
+if ! docker exec serverlesswp-test test -f "${policy_dir}/public.txt"; then
+    echo "public.txt was not created at ${policy_dir}/public.txt"
+    echo "Container /tmp/wp listing:"
+    docker exec serverlesswp-test ls -laR /tmp/wp/wp-content/uploads || true
+    exit 1
+fi
 public_response=$(curl -sk -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' -w $'\n%{http_code}' \
     "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt")
 public_status=${public_response##*$'\n'}
 public_body=${public_response%$'\n'*}
 # PHP may append a trailing newline when serving plain text files.
 public_body=${public_body%$'\n'}
-[[ "$public_status" == "200" ]] || { echo "Normal upload FAILED: expected 200, got $public_status"; exit 1; }
-[[ "$public_body" == "public-upload" ]] || { echo "Normal upload FAILED after applying sensitive-file policy: got '$public_body'"; exit 1; }
+[[ "$public_status" == "200" ]] || {
+    echo "Normal upload FAILED: expected 200, got $public_status"
+    echo "Response body: '$public_body'"
+    echo "Response headers:"
+    curl -skI -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' --max-time 10 \
+        "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt" || true
+    echo
+    echo "Proxy log tail:"
+    tail -n 50 "$PROXY_LOG" || true
+    exit 1
+}
+[[ "$public_body" == "public-upload" ]] || {
+    echo "Normal upload FAILED after applying sensitive-file policy: got '$public_body'"
+    echo "Response headers:"
+    curl -skI -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' --max-time 10 \
+        "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt" || true
+    echo
+    echo "Proxy log tail:"
+    tail -n 50 "$PROXY_LOG" || true
+    exit 1
+}
 echo "Sensitive upload policy test passed."
 
 : "Run the installer before Playwright so the login form actually exists."

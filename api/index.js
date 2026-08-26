@@ -16,7 +16,7 @@ const database = storage.resolve();
 // Load executable bootstrap only from the read-only bundle.
 const streamWrapperPrepend = '/var/task/wp/wp-content/mu-plugins/serverlesswp-stream-wrapper/bootstrap/prepend.php';
 
-const requestRouter = '/var/task/wp/router.php';
+const requestRouter = '/tmp/serverlesswp-router.php';
 
 const streamWrapperActive = !!process.env['SERVERLESSWP_STREAM_PROVIDER']
     && fs.existsSync(streamWrapperPrepend);
@@ -36,6 +36,52 @@ const readOnlyActive = !!process.env['SERVERLESSWP_READ_ONLY_MODE']
 let initDone = false;
 
 setup();
+
+// PHP's built-in server, when asked for a missing file under /wp-content/uploads/,
+// walks up the tree and executes wp-content/index.php (empty body, 200). A router
+// script keeps uploads safe and returns a clean 404 for missing files. Generated
+// under /tmp so no file has to be placed inside the read-only wp/ bundle.
+const routerPhp = `<?php
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$lowerUri = strtolower($uri);
+$uploadsPrefix = '/wp-content/uploads/';
+
+if (strpos($lowerUri, $uploadsPrefix) === 0) {
+    if (substr($lowerUri, -1) === '/') {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+
+    if (preg_match('/\\.(php|sql|sqlite3?|db|log|env|ini)$/i', $uri)) {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        echo 'Not Found';
+        return true;
+    }
+
+    $file = $_SERVER['DOCUMENT_ROOT'] . $uri;
+    if (is_file($file)) {
+        return false;
+    }
+
+    http_response_code(404);
+    header('Cache-Control: no-store');
+    echo 'Not Found';
+    return true;
+}
+
+return false;
+`;
+
+if (!streamWrapperActive && !fs.existsSync(requestRouter)) {
+    try {
+        fs.writeFileSync(requestRouter, routerPhp);
+    } catch (e) {
+        console.log('Could not write upload router script:', e);
+    }
+}
 
 function requestPath(event) {
     // Prefer explicit path fields; fall back to event.url for Vercel-style events.
