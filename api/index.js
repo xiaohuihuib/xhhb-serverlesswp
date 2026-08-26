@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 const serverlesswp = require('serverlesswp');
 
 const { validate } = require('../util/install.js');
@@ -165,6 +166,60 @@ function isSensitiveUpload(urlPath) {
     return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(decoded);
 }
 
+const UPLOADS_MIME = {
+    '.txt': 'text/plain',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.ico': 'image/x-icon',
+    '.pdf': 'application/pdf',
+    '.mp4': 'video/mp4',
+    '.mp3': 'audio/mpeg',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.xml': 'application/xml',
+    '.json': 'application/json',
+};
+
+// Serve upload files directly from the local filesystem when the stream wrapper
+// is not active. This mirrors how a real web server serves /wp-content/uploads/
+// and avoids PHP's built-in server falling back to wp-content/index.php when a
+// file is missing or unreadable.
+function serveUploadStatic(urlPath) {
+    if (streamWrapperActive) return null;
+
+    const lower = urlPath.toLowerCase();
+    if (!lower.startsWith('/wp-content/uploads/')) return null;
+    if (lower.endsWith('/')) return null;
+    if (isSensitiveUpload(urlPath)) return null;
+
+    const filePath = path.resolve(pathToWP, '.' + urlPath);
+    if (!filePath.startsWith(pathToWP + path.sep) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        return null;
+    }
+
+    const ext = path.extname(urlPath).toLowerCase();
+    const contentType = UPLOADS_MIME[ext] || 'application/octet-stream';
+    const data = fs.readFileSync(filePath);
+    const isText = contentType.startsWith('text/')
+        || contentType === 'application/javascript'
+        || contentType === 'application/xml'
+        || contentType === 'application/json';
+
+    return {
+        statusCode: 200,
+        headers: {
+            'content-type': contentType,
+            'cache-control': 'public, max-age=31536000, immutable',
+        },
+        body: isText ? data.toString('utf8') : data.toString('base64'),
+        isBase64Encoded: !isText,
+    };
+}
+
 exports.handler = async function (event, context, callback) {
     const urlPath = requestPath(event);
     if (isSensitiveUpload(urlPath)) {
@@ -173,6 +228,11 @@ exports.handler = async function (event, context, callback) {
             headers: { 'cache-control': 'no-store', 'content-type': 'text/plain' },
             body: 'Not Found',
         };
+    }
+
+    const directUpload = serveUploadStatic(urlPath);
+    if (directUpload) {
+        return directUpload;
     }
 
     if (!initDone) {

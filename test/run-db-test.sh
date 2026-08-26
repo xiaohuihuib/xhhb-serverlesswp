@@ -76,12 +76,13 @@ docker exec serverlesswp-test sh -c "printf '%s' '<?php echo \"INDEX-EXECUTED\";
 index_status=$(curl -sk -o /dev/null -w '%{http_code}' "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/php-index/")
 [[ "$index_status" == "404" ]] || { echo "Sensitive upload PHP index FAILED: expected 404, got $index_status"; exit 1; }
 docker exec serverlesswp-test sh -c "printf '%s' 'public-upload' > '${policy_dir}/public.txt'"
-if ! docker exec serverlesswp-test test -f "${policy_dir}/public.txt"; then
-    echo "public.txt was not created at ${policy_dir}/public.txt"
+actual_content=$(docker exec serverlesswp-test cat "${policy_dir}/public.txt" || true)
+[[ "$actual_content" == "public-upload" ]] || {
+    echo "public.txt content mismatch: got '$actual_content'"
     echo "Container /tmp/wp listing:"
     docker exec serverlesswp-test ls -laR /tmp/wp/wp-content/uploads || true
     exit 1
-fi
+}
 public_response=$(curl -sk -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' -w $'\n%{http_code}' \
     "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt")
 public_status=${public_response##*$'\n'}
