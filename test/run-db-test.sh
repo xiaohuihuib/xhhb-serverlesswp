@@ -80,8 +80,10 @@ public_response=$(curl -sk -H 'x-serverlesswp-stream-wrapper-fallthrough: 1' -w 
     "https://localhost:3000/wp-content/uploads/serverlesswp-policy-probe/public.txt")
 public_status=${public_response##*$'\n'}
 public_body=${public_response%$'\n'*}
+# PHP may append a trailing newline when serving plain text files.
+public_body=${public_body%$'\n'}
 [[ "$public_status" == "200" ]] || { echo "Normal upload FAILED: expected 200, got $public_status"; exit 1; }
-[[ "$public_body" == "public-upload" ]] || { echo "Normal upload FAILED after applying sensitive-file policy"; exit 1; }
+[[ "$public_body" == "public-upload" ]] || { echo "Normal upload FAILED after applying sensitive-file policy: got '$public_body'"; exit 1; }
 echo "Sensitive upload policy test passed."
 
 : "Run the installer before Playwright so the login form actually exists."
