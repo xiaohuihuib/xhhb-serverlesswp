@@ -10,3 +10,4 @@ test/local-pkg/*.tgz
 # Claude Code project memory and instructions.
 memory/
 CLAUDE.md
+php-files/
