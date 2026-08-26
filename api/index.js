@@ -97,7 +97,7 @@ function isSensitiveUpload(urlPath) {
     return /\.(php|sql|sqlite3?|db|log|env|ini)$/i.test(urlPath);
 }
 
-exports.handler = async function (event, context, callback) {
+exports.handler = async function (event, context) {
     const urlPath = requestPath(event);
     if (isSensitiveUpload(urlPath)) {
         return {
