@@ -67,7 +67,7 @@ unzip integrate-umami.0.8.3.zip
 mv integrate-umami wordpress/wp-content/plugins/
 
 wget https://downloads.wordpress.org/plugin/wordpress-importer.0.9.5.zip
-unzip wordpress-importer.0.9.5.zip
+unzip wordpress-importer.0.9.6.zip
 mv wordpress-importer wordpress/wp-content/plugins/
 
 wget https://downloads.wordpress.org/plugin/default-admin-color-scheme.1.0.3.zip
