@@ -154,6 +154,11 @@ if (!empty($_SERVER['HTTP_X_SERVERLESSWP_SQLITE_FILE'])) {
   define('WP_POST_REVISIONS', 1);
 }
 
+// Disable WordPress automatic update checks; they trigger external requests
+// and write attempts that are slow and useless in a read-only serverless env.
+define('AUTOMATIC_UPDATER_DISABLED', true );
+define('WP_AUTO_UPDATE_CORE', false );
+
 define('WP_DEFAULT_THEME', 'argon');
 
 /* That's all, stop editing! Happy publishing. */
