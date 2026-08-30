@@ -18,10 +18,6 @@ cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.po wordpress/wp-c
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordpress-importer-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
 
-cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.po wordpress/wp-content/languages/plugins/
-cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.mo wordpress/wp-content/languages/plugins/
-cp ../wp/wp-content/languages/plugins/wp-super-cache-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
-
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.po wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.mo wordpress/wp-content/languages/plugins/
 cp ../wp/wp-content/languages/plugins/wordfence-zh_CN.l10n.php wordpress/wp-content/languages/plugins/
@@ -66,7 +62,7 @@ wget https://downloads.wordpress.org/plugin/integrate-umami.0.8.3.zip
 unzip integrate-umami.0.8.3.zip
 mv integrate-umami wordpress/wp-content/plugins/
 
-wget https://downloads.wordpress.org/plugin/wordpress-importer.0.9.5.zip
+wget https://downloads.wordpress.org/plugin/wordpress-importer.0.9.6.zip
 unzip wordpress-importer.0.9.6.zip
 mv wordpress-importer wordpress/wp-content/plugins/
 
