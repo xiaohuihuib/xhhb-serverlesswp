@@ -14,14 +14,15 @@ const files = require('./files.js');
 const PLUGINS = [
     { slug: 'tidb-compatibility', version: 'latest' },
     { slug: 'simple-cloudflare-turnstile', version: 'latest' },
-    { slug: 'yctvn-media-offload-cloudflare-r2', version: '1.0.2' },
+    { slug: 'yctvn-media-offload-cloudflare-r2', version: 'latest' },
     { slug: 'asgaros-forum', version: '3.4.0' },
-    { slug: 'integrate-umami', version: '0.8.3' },
+    { slug: 'integrate-umami', version: 'latest' },
     { slug: 'wordpress-importer', version: '0.9.6' },
-    { slug: 'default-admin-color-scheme', version: '1.0.3' },
-    { slug: 'ai', version: '1.3.0' },
-    { slug: 'ai-provider-for-cloudflare', version: '1.0.0' },
+    { slug: 'default-admin-color-scheme', version: 'latest' },
+    { slug: 'ai', version: 'latest' },
+    { slug: 'ai-provider-for-cloudflare', version: 'latest' },
     { slug: 'wordfence', version: '9.0.0' },
+    { slug: 'akismet', version: 'latest' },
 ];
 
 exports.report = function (installed) {
