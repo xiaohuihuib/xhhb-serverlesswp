@@ -1,0 +1,78 @@
+# Opens a pull request when a new WordPress release comes out. Runs in every
+# copy, since a deployed site's repo has nobody logged in and DISALLOW_FILE_MODS
+# keeps wp-admin from offering the update. Two things must be enabled by hand per
+# copy -- see "Keeping WordPress updated" in the readme.
+name: Update WordPress
+on:
+  schedule:
+  # Evening pass, then a fallback twelve hours later. UTC (cron ignores DST); the
+  # odd minute dodges GitHub's dropped on-the-hour queue.
+  - cron: "10 21 * * *"
+  - cron: "10 9 * * *"
+  workflow_dispatch:
+
+# New repos default GITHUB_TOKEN to read-only, so without this the push fails.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update WordPress
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Update WordPress
+        id: update
+        run: node util/wp-update --report "${{ runner.temp }}/wp-update.md"
+
+      # The report describes the core update, so it's the PR body.
+      - name: Create Pull Request
+        if: steps.update.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "WordPress ${{ steps.update.outputs.to }}"
+          title: "Update WordPress to ${{ steps.update.outputs.to }}"
+          body-path: ${{ runner.temp }}/wp-update.md
+          delete-branch: true
+          branch: 'wordpress-version-update'
+
+  # Separate job and branch, so a plugin update never mixes into a core one and
+  # either can be merged or reverted on its own.
+  plugins:
+    name: Update plugins
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Update plugins
+        id: update
+        run: node util/wp-update --plugins --report "${{ runner.temp }}/plugin-update.md"
+
+      - name: Create Pull Request
+        if: steps.update.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "Update bundled plugins"
+          title: "Update ${{ steps.update.outputs.plugins }} bundled plugin(s)"
+          body-path: ${{ runner.temp }}/plugin-update.md
+          delete-branch: true
+          branch: 'plugin-version-update'
+
+      # Themes are now installed like plugins: argon is fetched from the GitHub
+      # release asset and every other theme directory is removed.
+      - name: Update themes
+        run: node util/wp-update --themes
