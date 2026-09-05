@@ -86,3 +86,29 @@ exports.apply = function (root, sourceRoot, plan) {
         removeEmptyParents(root, filePath);
     }
 };
+
+// Recursively copy a file or directory, preserving symlinks.
+exports.copyRecursive = function (src, dest) {
+    const stat = fs.lstatSync(src);
+    if (stat.isDirectory()) {
+        fs.mkdirSync(dest, { recursive: true });
+        for (const entry of fs.readdirSync(src)) {
+            exports.copyRecursive(path.join(src, entry), path.join(dest, entry));
+        }
+    } else if (stat.isSymbolicLink()) {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.symlinkSync(fs.readlinkSync(src), dest);
+    } else {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+    }
+};
+
+// Remove a path if it exists, ignoring errors.
+exports.removeIfExists = function (filePath) {
+    try {
+        fs.rmSync(filePath, { recursive: true, force: true });
+    } catch {
+        // ignore
+    }
+};

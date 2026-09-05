@@ -33,7 +33,7 @@ jobs:
         id: update
         run: node util/wp-update --report "${{ runner.temp }}/wp-update.md"
 
-      # The report explains what was left untouched and why, so it's the PR body.
+      # The report describes the core update, so it's the PR body.
       - name: Create Pull Request
         if: steps.update.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -72,9 +72,7 @@ jobs:
           delete-branch: true
           branch: 'plugin-version-update'
 
-      # Themes are report-only (no checksums to verify them), so with nothing to
-      # commit the findings go to the run summary. Never fails the job.
-      - name: Report on themes
-        if: always()
-        continue-on-error: true
+      # Themes are now installed like plugins: argon is fetched from the GitHub
+      # release asset and every other theme directory is removed.
+      - name: Update themes
         run: node util/wp-update --themes

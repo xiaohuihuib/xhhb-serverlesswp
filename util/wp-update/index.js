@@ -1,22 +1,20 @@
 // Keeps the bundled WordPress up to date.
 //
-//   node util/wp-update                     update wp/ to the latest release
-//   node util/wp-update --plugins           update bundled wordpress.org plugins
-//   node util/wp-update --themes            report on themes, change nothing
+//   node util/wp-update                     update wp/ from latest-zh_CN.zip
+//   node util/wp-update --plugins           install pinned wordpress.org plugins
+//   node util/wp-update --themes            install argon and remove other themes
 //   node util/wp-update --dry-run           report what would change, touch nothing
 //
-// All three are safe to run in a copy of this repository: a file is
-// only written when wordpress.org's checksums prove the copy on disk still
-// holds what was published. The two run separately and produce separate pull
-// requests, so a plugin update never rides along with a core one.
+// The three modes run separately and produce separate pull requests, so a
+// plugin update never rides along with a core one.
 //
-//   core.js      the WordPress files themselves
-//   plugins.js   bundled plugins from wordpress.org
-//   themes.js    themes, which are only ever reported on
+//   core.js      the WordPress files themselves, from the Chinese release
+//   plugins.js   bundled plugins from wordpress.org, pinned versions
+//   themes.js    argon theme from the GitHub release, removing all others
 //   plan.js      the rules deciding what gets written or deleted
 //   files.js     reading and writing the working copy
 //   versions.js  comparing header versions
-//   api.js       where every checksum comes from
+//   api.js       where every download comes from
 
 const fs = require('fs');
 const path = require('path');

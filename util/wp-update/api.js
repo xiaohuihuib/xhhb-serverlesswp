@@ -11,6 +11,7 @@ const { execFileSync } = require('child_process');
 const STABLE_CHECK = 'https://api.wordpress.org/core/stable-check/1.0/';
 const CHECKSUMS = 'https://api.wordpress.org/core/checksums/1.0/';
 const RELEASE = 'https://downloads.wordpress.org/release/';
+const CHINESE_RELEASE = 'https://cn.wordpress.org/';
 const PLUGIN_INFO = 'https://api.wordpress.org/plugins/info/1.2/';
 const PLUGIN_CHECKSUMS = 'https://downloads.wordpress.org/plugin-checksums/';
 const PLUGIN_DOWNLOAD = 'https://downloads.wordpress.org/plugin/';
@@ -70,6 +71,26 @@ exports.checksums = async function (version, locale = 'en_US') {
 exports.downloadRelease = async function (version, workDir) {
     const zipPath = path.join(workDir, `wordpress-${version}.zip`);
     const url = `${RELEASE}wordpress-${version}.zip`;
+
+    fs.mkdirSync(workDir, { recursive: true });
+    await download(url, zipPath);
+    unzip(zipPath, workDir);
+
+    const root = path.join(workDir, 'wordpress');
+    if (!fs.existsSync(root)) {
+        throw new Error(`${url} did not contain a wordpress/ directory`);
+    }
+
+    return root;
+};
+
+// Downloads and unpacks the Chinese localized release. Pass 'latest' to use
+// the same unversioned URL the bash script used; otherwise the versioned URL
+// is requested.
+exports.downloadChineseRelease = async function (version, workDir) {
+    const isLatest = version === 'latest';
+    const zipPath = path.join(workDir, isLatest ? 'latest-zh_CN.zip' : `wordpress-${version}-zh_CN.zip`);
+    const url = isLatest ? `${CHINESE_RELEASE}latest-zh_CN.zip` : `${CHINESE_RELEASE}wordpress-${version}-zh_CN.zip`;
 
     fs.mkdirSync(workDir, { recursive: true });
     await download(url, zipPath);
@@ -171,6 +192,43 @@ exports.downloadPlugin = async function (slug, version, workDir) {
     const root = path.join(into, slug);
     if (!fs.existsSync(root)) {
         throw new Error(`${url} did not contain a ${slug}/ directory`);
+    }
+
+    return root;
+};
+
+// Unpacks the latest published release of a plugin. wordpress.org serves a
+// slug-only URL that redirects to the current versioned zip.
+exports.downloadPluginLatest = async function (slug, workDir) {
+    const into = path.join(workDir, `${slug}-latest`);
+    const zipPath = path.join(workDir, `${slug}.zip`);
+    const url = `${PLUGIN_DOWNLOAD}${encodeURIComponent(slug)}.zip`;
+
+    fs.mkdirSync(into, { recursive: true });
+    await download(url, zipPath);
+    unzip(zipPath, into);
+
+    const root = path.join(into, slug);
+    if (!fs.existsSync(root)) {
+        throw new Error(`${url} did not contain a ${slug}/ directory`);
+    }
+
+    return root;
+};
+
+// Downloads an arbitrary zip and extracts it, returning the directory that
+// contains the extracted contents. Useful for GitHub release assets.
+exports.downloadArchive = async function (url, workDir, expectedDir) {
+    const name = path.basename(new URL(url).pathname) || 'archive.zip';
+    const zipPath = path.join(workDir, name);
+
+    fs.mkdirSync(workDir, { recursive: true });
+    await download(url, zipPath);
+    unzip(zipPath, workDir);
+
+    const root = expectedDir ? path.join(workDir, expectedDir) : workDir;
+    if (expectedDir && !fs.existsSync(root)) {
+        throw new Error(`${url} did not contain a ${expectedDir}/ directory`);
     }
 
     return root;

@@ -1,148 +1,58 @@
-// Reports on themes and never writes anything. wordpress.org publishes no
-// theme-checksums, so a theme on disk can't be proven to be the release it
-// claims; without that proof a theme update is the owner's to make. Themes that
-// ship with WordPress are covered by the core update (their files are in the
-// core checksums), so reporting them as outdated would be wrong -- which ones
-// those are comes from .org, for the exact WordPress version on disk.
+// Installs the argon theme from the repository's GitHub release and removes
+// every other theme directory, so the result matches the original bash update
+// script.
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const api = require('./api.js');
-const core = require('./core.js');
-const versions = require('./versions.js');
+const files = require('./files.js');
 
-// A theme is a directory with a style.css carrying a Theme Name header.
-exports.readHeader = function (themeDir) {
-    let style;
-    try {
-        style = fs.readFileSync(path.join(themeDir, 'style.css'), 'utf8').slice(0, 8192);
-    } catch {
-        return null;
-    }
+const ARGON_URL = 'https://github.com/xiaohuihuib/xhhb-serverlesswp/releases/download/V1.3.5/argon.zip';
+const ARGON_SLUG = 'argon';
 
-    if (!versions.headerField(style, 'Theme Name')) {
-        return null;
-    }
-
-    return { version: versions.headerField(style, 'Version') };
-};
-
-exports.discover = function (themesRoot) {
-    let entries;
-    try {
-        entries = fs.readdirSync(themesRoot, { withFileTypes: true });
-    } catch {
-        return [];
-    }
-
-    const found = [];
-    for (const entry of entries.filter((e) => e.isDirectory()).sort((a, b) => a.name.localeCompare(b.name))) {
-        const header = exports.readHeader(path.join(themesRoot, entry.name));
-        if (header) {
-            found.push({ slug: entry.name, installed: header.version });
-        }
-    }
-
-    return found;
-};
-
-// The theme directories a WordPress release ships, read from its own file list
-// rather than a hardcoded set of names.
-exports.bundledSlugs = function (checksums) {
-    const slugs = new Set();
-
-    for (const filePath of Object.keys(checksums)) {
-        const parts = filePath.split('/');
-        if (parts[0] === 'wp-content' && parts[1] === 'themes' && parts.length > 3) {
-            slugs.add(parts[2]);
-        }
-    }
-
-    return slugs;
-};
-
-exports.inspect = async function (theme, bundled) {
-    if (bundled.has(theme.slug)) {
-        return { ...theme, status: 'core' };
-    }
-
-    if (!theme.installed) {
-        return { ...theme, status: 'no-version' };
-    }
-
-    const info = await api.themeInfo(theme.slug);
-    if (!info) {
-        return { ...theme, status: 'not-on-org' };
-    }
-
-    if (versions.compareVersions(info.version, theme.installed) <= 0) {
-        return { ...theme, latest: info.version, status: 'current' };
-    }
-
-    return { ...theme, latest: info.version, status: 'outdated' };
-};
-
-exports.report = function (results) {
-    const outdated = results.filter((r) => r.status === 'outdated');
-    const custom = results.filter((r) => r.status === 'not-on-org' || r.status === 'no-version');
-    const bundled = results.filter((r) => r.status === 'core');
-    const current = results.filter((r) => r.status === 'current');
-
-    const lines = ['## Themes', ''];
-
-    if (outdated.length) {
-        lines.push(`**${outdated.length} theme(s) have a newer release on wordpress.org.**`, '');
-        lines.push('Themes are never updated automatically: wordpress.org publishes no');
-        lines.push('checksums for them, so there is no way to tell an untouched copy from');
-        lines.push('one that has been edited. Updating these is a manual step.', '');
-
-        for (const theme of outdated) {
-            lines.push(`- \`${theme.slug}\` ${theme.installed} → ${theme.latest} — https://wordpress.org/themes/${theme.slug}/`);
-        }
-    } else {
-        lines.push('No theme has a newer release on wordpress.org.');
-    }
-
-    const notes = [];
-    if (bundled.length) {
-        notes.push(`${bundled.length} shipped with WordPress and covered by the core update`);
-    }
-    if (current.length) {
-        notes.push(`${current.length} already up to date`);
-    }
-    if (custom.length) {
-        notes.push(`${custom.length} not published on wordpress.org (${custom.map((t) => t.slug).join(', ')})`);
-    }
-
-    if (notes.length) {
-        lines.push('', notes.join('; ') + '.');
-    }
-
-    return lines.join('\n');
+exports.report = function () {
+    return [
+        '## Themes',
+        '',
+        `- Installed \`${ARGON_SLUG}\` from the GitHub release asset`,
+        '- Removed all other theme directories',
+    ].join('\n');
 };
 
 exports.run = async function (options) {
     const themesRoot = path.join(options.root, 'wp-content', 'themes');
-    const themes = exports.discover(themesRoot);
 
-    console.log(`Found ${themes.length} theme(s) in ${themesRoot}.`);
+    console.log(`Installing ${ARGON_SLUG} theme into ${themesRoot}...`);
 
-    // Which themes this WordPress ships, for the version actually on disk.
-    const wpVersion = core.installedVersion(options.root);
-    const bundled = exports.bundledSlugs(await api.checksums(wpVersion));
-
-    const results = [];
-    for (const theme of themes) {
-        const result = await exports.inspect(theme, bundled);
-        console.log(`  ${theme.slug} ${theme.installed || '?'} — ${result.status}`);
-        results.push(result);
+    if (options.dryRun) {
+        return { updated: false, report: exports.report(), outputs: { themes: 1 } };
     }
 
-    // Nothing to commit, ever, so this never reports an update.
-    return {
-        updated: false,
-        report: exports.report(results),
-        outputs: { outdated: results.filter((r) => r.status === 'outdated').length },
-    };
+    // Remove every theme directory currently present.
+    let entries = [];
+    try {
+        entries = fs.readdirSync(themesRoot, { withFileTypes: true });
+    } catch {
+        // directory may not exist yet
+    }
+    for (const entry of entries) {
+        const fullPath = path.join(themesRoot, entry.name);
+        if (entry.isFile() && entry.name === 'index.php') {
+            continue;
+        }
+        files.removeIfExists(fullPath);
+    }
+
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-themes-'));
+    try {
+        const source = await api.downloadArchive(ARGON_URL, workDir, ARGON_SLUG);
+        files.copyRecursive(source, path.join(themesRoot, ARGON_SLUG));
+        console.log(`Installed ${ARGON_SLUG} theme.`);
+    } finally {
+        fs.rmSync(workDir, { recursive: true, force: true });
+    }
+
+    return { updated: true, report: exports.report(), outputs: { themes: 1 } };
 };
