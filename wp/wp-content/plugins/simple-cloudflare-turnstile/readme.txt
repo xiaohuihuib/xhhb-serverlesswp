@@ -3,8 +3,8 @@ Contributors: ElliotVS, RelyWP
 Tags: cloudflare,turnstile,captcha,protect,spam
 Donate link: https://www.elliotsowersby.com/donate/
 Requires at least: 4.7
-Tested up to: 7.0
-Stable Tag: 1.42.1
+Tested up to: 7.1
+Stable Tag: 1.43.1
 License: GPLv3 or later.
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -207,7 +207,31 @@ If you are still having issues, please post a <a href="https://wordpress.org/sup
 
 You can report security bugs through the Patchstack Vulnerability Disclosure Program. The Patchstack team help validate, triage and handle any security vulnerabilities. [Report a security vulnerability.](https://patchstack.com/database/vdp/simple-cloudflare-turnstile)
 
-== Changelog ===
+== Changelog ==
+
+= Version 1.43.1 - 11th September 2026 =
+- Fix: Fixed an issue since 1.42.3 where the "Before Payment", "After Payment" and "Before Pay Button" widget positions could place the Turnstile widget outside the WooCommerce block checkout, away from the form, on a checkout page whose saved content is missing the payment or place order blocks. The widget is now always placed inside the checkout, above the payment section.
+- Fix: Fixed an issue since 1.38.0 where the Turnstile widget was added twice to a form inside an Elementor popup, which could leave the form unable to be submitted. Elementor rebuilds a popup from a copy of its markup each time it opens, so the widget is now added when the popup opens rather than before it.
+
+= Version 1.43.0 - 9th September 2026 =
+- New: Added support for Elementor's new Atomic forms, using the same "Enable Elementor Forms" setting as classic Elementor Pro forms.
+- New: Added support for Wordfence 9.0.0's Login Security passkeys, which were rejected with a missing challenge error when the WordPress login check was enabled.
+- Tweak: Added the cfturnstile_is_partial_checkout_render filter, so other page builders can flag any extra renders of the checkout template.
+- Fix: Fixed an issue since 1.42.3 where WooCommerce orders paid with a card gateway such as Stripe or WooPayments could be rejected with a Turnstile error.
+- Fix: Fixed an issue since 1.42.3 where every order on a WooCommerce checkout built with the Divi Builder's Checkout modules was rejected with a Turnstile error.
+- Fix: Fixed a WooCommerce checkout token remaining usable for up to two minutes when the request that used it ended unexpectedly, such as after a fatal error.
+
+= Version 1.42.3 - 7th September 2026 =
+- Fix: Fixed the Turnstile widget not being reset after a failed submission on forms that submit without a page reload, such as AJAX login forms and single page (SPA) themes.
+- Fix: Fixed the Turnstile widget not appearing on the WooCommerce checkout when the section chosen in the "Widget Position" setting was not part of the checkout. It now falls back to a position above the "Place Order" button.
+- Fix: Fixed the "After Payment" widget position removing the entire payment section, including the payment methods, from the WooCommerce block checkout.
+- Fix: Fixed the Turnstile widget not appearing on the WooCommerce app authorization screen (/wc-auth/). You are now sent to the WordPress login form to complete the challenge, then returned to the authorization screen.
+- Fix: Fixed the "cloudflare turnstile" button in the Contact Form 7 form editor inserting nothing when clicked.
+- Fix: Fixed the Turnstile error message not being shown on the Gravity Forms User Registration login form ([gravityform action="login"]).
+- Security: Fixed vulnerabilities where the Turnstile check on the WooCommerce checkout and lost password form, and WordPress login and lost password forms could be potentially be bypassed.
+- Security: Fixed a vulnerability in the Contact Form 7 integration, where an unauthenticated visitor could run any shortcode registered on the site by submitting it as a field value. Reported by Jakub Herman via WPScan.
+- Security: Fixed a vulnerability where the Turnstile check on Gravity Forms could be bypassed by adding a page number to the request. The check is now only skipped on forms that really do have more than one page.
+- Tweak: The Turnstile form-tag for Contact Form 7 is now [cf7_simple_turnstile]. Your existing [cf7-simple-turnstile] tags keep working and do not need to be changed.
 
 = Version 1.42.1 - 27th July 2026 =
 - Fix: Fixed an issue since 1.42.0 where the submit button could stay disabled after the Turnstile challenge was completed, when the "Disable Submit Button" option is enabled. On the login form this could lock you out of your site.

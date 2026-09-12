@@ -1328,7 +1328,7 @@ function cfturnstile_settings_page() {
 					<br />
 
 					<?php echo esc_html__('To add Turnstile to individual Contact Form 7 forms, simply add this shortcode to any of your forms (in the form editor):', 'simple-cloudflare-turnstile'); ?>
-					<br /><span style="color: red; font-weight: bold;">[cf7-simple-turnstile]</span>
+					<br /><span style="color: red; font-weight: bold;">[cf7_simple_turnstile]</span>
 
 				</div>
 			<?php
@@ -1710,7 +1710,7 @@ function cfturnstile_settings_page() {
 
 					</table>
 
-					<?php echo esc_html__('When enabled, Turnstile will be added to your Elementor Pro forms. Use the options below to control where scripts are loaded and where the widget appears.', 'simple-cloudflare-turnstile'); ?>
+					<?php echo esc_html__('When enabled, Turnstile will be added to your Elementor Pro forms, including Atomic forms. Use the options below to control where scripts are loaded and where the widget appears.', 'simple-cloudflare-turnstile'); ?>
 
 					<table class="form-table" style="margin-bottom: -15px;">
 
