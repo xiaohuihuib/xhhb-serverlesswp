@@ -158,6 +158,13 @@ class Controller_REST {
 	 * @return \WP_REST_Response|array
 	 */
 	public function _begin_passkey_login_callback($request) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			return $this->rest_response(array(
+				'available' => false,
+				'passkeys_active' => false,
+				'reason' => 'disabled',
+			));
+		}
 		$data = $this->request_data($request);
 		$passkeyController = Controller_Passkey::shared();
 		$clientIp = $this->string_value($data, 'client_ip', null);
@@ -203,6 +210,13 @@ class Controller_REST {
 	 * @return \WP_REST_Response|array
 	 */
 	public function _finish_passkey_login_callback($request) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			return $this->error_response(new \WP_Error(
+				'wfls_passkeys_disabled',
+				__('Passkeys are currently disabled.', 'wordfence'),
+				array('status' => 403)
+			));
+		}
 		$data = $this->request_data($request);
 		$token = $this->string_value($data, 'token', '');
 		$credential = $this->credential_value($data);
@@ -347,6 +361,7 @@ class Controller_REST {
 		if (!Controller_Passkey::shared()->set_username_password_auth_enabled($user, $enabled)) {
 			return $this->error_response(new \WP_Error('wfls_passkey_password_auth_save_failed', __('Unable to save the user-specific passkey options.', 'wordfence')));
 		}
+		$enabled = Controller_Passkey::shared()->is_username_password_auth_enabled($user);
 
 		return $this->rest_response(array(
 			'saved' => true,
@@ -693,7 +708,23 @@ class Controller_REST {
 		$canRegister = $passkeyController->can_register_passkeys($user, $user) && $passkeyController->has_passkey_capacity($passkeys);
 		$requiresPasskey = Controller_Users::shared()->requires_passkey($user, $inGracePeriod, $requiredAt);
 		$hasPasskeys = !empty($passkeys);
-		$canChangePasswordAuth = $canManage && $passkeyController->can_change_username_password_auth($user);
+		$roleAllowsPasswordAuth = $passkeyController->can_change_username_password_auth($user);
+		$canChangePasswordAuth = $canManage && $roleAllowsPasswordAuth;
+		$passwordAuthEnabled = !$hasPasskeys && $roleAllowsPasswordAuth
+			? true
+			: $passkeyController->is_username_password_auth_enabled($user);
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			$effectivePasswordAuthEnabled = true;
+		}
+		else if (!$roleAllowsPasswordAuth) {
+			$effectivePasswordAuthEnabled = false;
+		}
+		else if (!$canManage) {
+			$effectivePasswordAuthEnabled = true;
+		}
+		else {
+			$effectivePasswordAuthEnabled = $passwordAuthEnabled || !$hasPasskeys;
+		}
 
 		return array(
 			'available' => $canManage,
@@ -701,10 +732,10 @@ class Controller_REST {
 			'can_register' => $canRegister,
 			'has_passkeys' => $hasPasskeys,
 			'passkeys' => array_map(array($this, 'passkey_response'), $passkeys),
-			'username_password_auth_enabled' => $passkeyController->is_username_password_auth_enabled($user),
-			'effective_username_password_auth_enabled' => $passkeyController->is_effective_username_password_auth_enabled($user),
+			'username_password_auth_enabled' => $passwordAuthEnabled,
+			'effective_username_password_auth_enabled' => $effectivePasswordAuthEnabled,
 			'can_change_username_password_auth' => $canChangePasswordAuth,
-			'password_auth_blocked' => $hasPasskeys && !$passkeyController->is_effective_username_password_auth_enabled($user),
+			'password_auth_blocked' => $hasPasskeys && !$effectivePasswordAuthEnabled,
 			'requires_passkey' => $requiresPasskey,
 			'passkey_required_grace_period' => (bool) $inGracePeriod,
 			'passkey_required_at' => $requiredAt === null ? null : (int) $requiredAt,

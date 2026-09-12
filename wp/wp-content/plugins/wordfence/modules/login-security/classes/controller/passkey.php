@@ -34,6 +34,9 @@ class Controller_Passkey {
 	}
 
 	public function init() {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			return;
+		}
 		add_filter('authenticate', array($this, '_authenticate_verified_passkey'), 5, 3);
 
 		$monarxLoaderSuffix = '/monarx-protect/loader.php';
@@ -172,14 +175,28 @@ class Controller_Passkey {
 	/**
 	 * Returns the effective username/password authentication setting for the user.
 	 *
-	 * If passkeys are required for one of the user's roles, username/password authentication is effectively disabled
-	 * regardless of the stored preference.
+	 * Username/password authentication remains available while passkeys are globally disabled. While enabled, a
+	 * required passkey role effectively disables password authentication regardless of role availability or the stored
+	 * preference. For a non-required role, password authentication remains available when passkeys are unavailable and
+	 * may otherwise be disabled only after the user has registered a passkey.
 	 *
 	 * @param \WP_User $user
 	 * @return bool
 	 */
 	public function is_effective_username_password_auth_enabled($user) {
-		return $this->can_change_username_password_auth($user) && $this->is_username_password_auth_enabled($user);
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			return true;
+		}
+		if (!$this->can_change_username_password_auth($user)) {
+			return false;
+		}
+		if (!Controller_Users::shared()->can_manage_passkey($user)) {
+			return true;
+		}
+		if ($this->is_username_password_auth_enabled($user)) {
+			return true;
+		}
+		return !Controller_Users::shared()->has_registered_passkey($user);
 	}
 
 	/**
@@ -192,6 +209,9 @@ class Controller_Passkey {
 	public function set_username_password_auth_enabled($user, $enabled) {
 		$before = $this->is_username_password_auth_enabled($user);
 		$after = (bool) $enabled;
+		if (!$after && $this->can_change_username_password_auth($user) && !Controller_Users::shared()->has_registered_passkey($user)) {
+			$after = true;
+		}
 		if ($before === $after) {
 			return true;
 		}
@@ -496,7 +516,7 @@ class Controller_Passkey {
 			$registrationTokenLock->release();
 		}
 		$now = Controller_Time::time();
-		$result = $this->insert_passkey_record_with_limit($table, $user->ID, $authData['credential_id'], $authData['public_key'], $authData['sign_count'], $transports, $label, $registrationUserHandle, $now);
+		$result = $this->insert_passkey_record_with_limit($table, $user, $authData['credential_id'], $authData['public_key'], $authData['sign_count'], $transports, $label, $registrationUserHandle, $now);
 		if (is_wp_error($result)) {
 			return $result;
 		}
@@ -563,6 +583,11 @@ class Controller_Passkey {
 		if (!$existing) {
 			return new \WP_Error('wfls_passkey_missing', __('The requested passkey does not exist for this account.', 'wordfence'));
 		}
+		$restorePasswordAuth = false;
+		if (!$this->is_username_password_auth_enabled($user) && $this->can_change_username_password_auth($user)) {
+			$passkeyCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$table}` WHERE `user_id` = %d", $user->ID));
+			$restorePasswordAuth = $passkeyCount <= 1;
+		}
 
 		$deleted = $wpdb->delete($table, array(
 			'id' => $passkeyId,
@@ -572,6 +597,9 @@ class Controller_Passkey {
 			return new \WP_Error('wfls_passkey_remove_failed', __('Unable to remove the passkey. Please try again.', 'wordfence'));
 		}
 		Controller_Users::shared()->clear_passkey_active_cache($user->ID);
+		if ($restorePasswordAuth) {
+			$this->set_username_password_auth_enabled($user, true);
+		}
 		if (!$this->any_passkeys_active()) {
 			Controller_Settings::shared()->set(Controller_Settings::OPTION_LAST_PASSKEY_RP, '');
 		}
@@ -1382,7 +1410,7 @@ class Controller_Passkey {
 	 * Serializes the per-user count check and passkey insert.
 	 *
 	 * @param string $table Fully-qualified passkeys table name.
-	 * @param int $userId User ID that owns the passkey.
+	 * @param \WP_User $user User that owns the passkey.
 	 * @param string $credentialId Raw binary credential ID.
 	 * @param string $publicKey Raw COSE public key.
 	 * @param int $signCount Authenticator sign count.
@@ -1392,14 +1420,18 @@ class Controller_Passkey {
 	 * @param int $now Current timestamp for ctime and mtime.
 	 * @return int|bool|\WP_Error Insert result, or an error when the limit cannot be checked safely.
 	 */
-	private function insert_passkey_record_with_limit($table, $userId, $credentialId, $publicKey, $signCount, $transports, $label, $userHandle, $now) {
+	private function insert_passkey_record_with_limit($table, $user, $credentialId, $publicKey, $signCount, $transports, $label, $userHandle, $now) {
 		global $wpdb;
+		$userId = (int) $user->ID;
 		$lock = new Utility_DatabaseLock(Controller_DB::shared(), 'passkey-registration:' . (int) $userId, 5);
 		try {
 			$lock->acquire();
 			$passkeyCount = (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `{$table}` WHERE `user_id` = %d", $userId));
 			if ($passkeyCount >= $this->max_passkeys_per_user()) {
 				return $this->passkey_limit_error();
+			}
+			if ($passkeyCount === 0 && $this->can_change_username_password_auth($user) && !$this->set_username_password_auth_enabled($user, true)) {
+				return new \WP_Error('wfls_passkey_password_auth_restore_failed', __('Unable to restore username/password authentication before registering the first passkey. Please try again.', 'wordfence'));
 			}
 			return $this->insert_passkey_record($table, $userId, $credentialId, $publicKey, $signCount, $transports, $label, $userHandle, $now);
 		}

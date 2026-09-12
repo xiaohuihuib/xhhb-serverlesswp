@@ -265,7 +265,7 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 
 		$ip = $this->getRequest()->getIP();
 		if ($this->isIPBlocked($ip)) {
-			$this->eventBus->prevBlocked($ip);
+			$this->notifyBlockEvent('prevBlocked', $ip);
 			$e = new wfWAFBlockException();
 			$e->setRequest($this->getRequest());
 			$e->setFailedRules(array('blocked'));
@@ -282,15 +282,15 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 			$this->eventBus->allow($ip, $e);
 
 		} catch (wfWAFBlockException $e) {
-			$this->eventBus->block($ip, $e);
+			$this->notifyBlockEvent('block', $ip, $e);
 			$this->blockAction($e);
 
 		} catch (wfWAFBlockXSSException $e) {
-			$this->eventBus->blockXSS($ip, $e);
+			$this->notifyBlockEvent('blockXSS', $ip, $e);
 			$this->blockXSSAction($e);
 
 		} catch (wfWAFBlockSQLiException $e) {
-			$this->eventBus->blockSQLi($ip, $e);
+			$this->notifyBlockEvent('blockSQLi', $ip, $e);
 			$this->blockAction($e);
 			
 		}
@@ -1215,24 +1215,8 @@ HTML
 	 * @param int $httpCode
 	 */
 	public function blockAction($e, $httpCode = 403, $redirect = false, $template = null) {
-		$this->getStorageEngine()->logAttack($e->getFailedRules(), $e->getParamKey(), $e->getParamValue(), $e->getRequest(), $e->getRequest()->getMetadata());
-		
-		if ($redirect) {
-			wfWAFUtils::redirect($redirect); // exits and emits no cache headers
-		}
-		
-		if ($httpCode == 503) {
-			wfWAFUtils::statusHeader(503);
-			wfWAFUtils::doNotCache();
-			if ($secsToGo = $e->getRequest()->getMetadata('503Time')) {
-				header('Retry-After: ' . $secsToGo);
-			}
-			exit($this->getUnavailableMessage($e->getRequest()->getMetadata('503Reason'), $template));
-		}
-		
-		header('HTTP/1.0 403 Forbidden');
-		wfWAFUtils::doNotCache();
-		exit($this->getBlockedMessage($template));
+		$this->logBlockedRequest($e);
+		$this->sendBlockResponse($e, $httpCode, $redirect, $template);
 	}
 
 	/**
@@ -1241,24 +1225,236 @@ HTML
 	 * @param int $httpCode
 	 */
 	public function blockXSSAction($e, $httpCode = 403, $redirect = false) {
-		$this->getStorageEngine()->logAttack($e->getFailedRules(), $e->getParamKey(), $e->getParamValue(), $e->getRequest(), $e->getRequest()->getMetadata());
-		
+		$this->logBlockedRequest($e);
+		$this->sendBlockResponse($e, $httpCode, $redirect);
+	}
+
+	/**
+	 * Notify observers of a completed block decision without allowing observer failures to prevent enforcement.
+	 * @param string $method
+	 * @param string $ip
+	 * @param wfWAFRunException|null $exception
+	 * @return void
+	 */
+	protected function notifyBlockEvent($method, $ip, $exception = null) {
+		try {
+			switch ($method) {
+				case 'prevBlocked':
+					$this->eventBus->prevBlocked($ip);
+					break;
+
+				case 'block':
+					$this->eventBus->block($ip, $exception);
+					break;
+
+				case 'blockXSS':
+					$this->eventBus->blockXSS($ip, $exception);
+					break;
+
+				case 'blockSQLi':
+					$this->eventBus->blockSQLi($ip, $exception);
+					break;
+
+				default:
+					throw new InvalidArgumentException('Unsupported block event notification: ' . $method);
+			}
+		}
+		catch (Exception $eventException) {
+			$this->reportBlockAuxiliaryFailure('block event notification', $eventException);
+		}
+		catch (Throwable $eventException) {
+			$this->reportBlockAuxiliaryFailure('block event notification', $eventException);
+		}
+	}
+
+	/**
+	 * Log a blocked request without allowing storage or request-rendering failures to prevent enforcement.
+	 * @param wfWAFRunException $exception
+	 * @return void
+	 */
+	protected function logBlockedRequest($exception) {
+		try {
+			$request = $exception->getRequest();
+			$this->getStorageEngine()->logAttack($exception->getFailedRules(), $exception->getParamKey(), $exception->getParamValue(), $request, $request->getMetadata());
+		}
+		catch (Exception $loggingException) {
+			$this->reportBlockAuxiliaryFailure('attack logging', $loggingException);
+		}
+		catch (Throwable $loggingException) {
+			$this->reportBlockAuxiliaryFailure('attack logging', $loggingException);
+		}
+	}
+
+	/**
+	 * Send the configured block response, falling back to a dependency-free response if auxiliary work fails.
+	 * @param wfWAFRunException $exception
+	 * @param int $httpCode
+	 * @param string|false $redirect
+	 * @param string|null $template
+	 * @return void
+	 */
+	protected function sendBlockResponse($exception, $httpCode, $redirect, $template = null) {
 		if ($redirect) {
+			$this->sendBlockRedirect($redirect);
+		}
+
+		if ($httpCode == 503) {
+			$this->sendStatusHeader(503, 'HTTP/1.0 503 Service Unavailable');
+			$this->sendNoCacheHeaders();
+			try {
+				if ($secsToGo = $exception->getRequest()->getMetadata('503Time')) {
+					header('Retry-After: ' . $secsToGo);
+				}
+			}
+			catch (Exception $metadataException) {
+				$this->reportBlockAuxiliaryFailure('503 response metadata', $metadataException);
+			}
+			catch (Throwable $metadataException) {
+				$this->reportBlockAuxiliaryFailure('503 response metadata', $metadataException);
+			}
+
+			$response = $this->getSafeBlockResponse($exception, $httpCode, $template);
+			if ($response['fallback']) {
+				$this->sendRawBlockHeader('Content-Type: text/plain; charset=UTF-8');
+			}
+			exit($response['message']);
+		}
+
+		$this->sendStatusHeader(403, 'HTTP/1.0 403 Forbidden');
+		$this->sendNoCacheHeaders();
+		$response = $this->getSafeBlockResponse($exception, $httpCode, $template);
+		if ($response['fallback']) {
+			$this->sendRawBlockHeader('Content-Type: text/plain; charset=UTF-8');
+		}
+		exit($response['message']);
+	}
+
+	/**
+	 * Attempt a configured block redirect, returning only if it fails.
+	 * @param string $redirect
+	 * @return bool
+	 */
+	protected function sendBlockRedirect($redirect) {
+		try {
 			wfWAFUtils::redirect($redirect); // exits and emits no cache headers
 		}
-		
-		if ($httpCode == 503) {
-			wfWAFUtils::statusHeader(503);
-			wfWAFUtils::doNotCache();
-			if ($secsToGo = $e->getRequest()->getMetadata('503Time')) {
-				header('Retry-After: ' . $secsToGo);
-			}
-			exit($this->getUnavailableMessage($e->getRequest()->getMetadata('503Reason')));
+		catch (Exception $redirectException) {
+			$this->reportBlockAuxiliaryFailure('block redirect', $redirectException);
 		}
-		
-		header('HTTP/1.0 403 Forbidden');
-		wfWAFUtils::doNotCache();
-		exit($this->getBlockedMessage());
+		catch (Throwable $redirectException) {
+			$this->reportBlockAuxiliaryFailure('block redirect', $redirectException);
+		}
+		return false;
+	}
+
+	/**
+	 * Render a block response with a dependency-free fallback.
+	 * @param wfWAFRunException $exception
+	 * @param int $httpCode
+	 * @param string|null $template
+	 * @return array
+	 */
+	protected function getSafeBlockResponse($exception, $httpCode, $template = null) {
+		$isUnavailable = ($httpCode == 503);
+		$response = array(
+			'message' => $isUnavailable ? 'Service Unavailable' : 'Forbidden',
+			'fallback' => true,
+		);
+		try {
+			if ($isUnavailable) {
+				$response['message'] = $this->getUnavailableMessage($exception->getRequest()->getMetadata('503Reason'), $template);
+			}
+			else {
+				$response['message'] = $this->getBlockedMessage($template);
+			}
+			$response['fallback'] = false;
+		}
+		catch (Exception $renderException) {
+			$this->reportBlockAuxiliaryFailure(($isUnavailable ? '503' : '403') . ' response rendering', $renderException);
+		}
+		catch (Throwable $renderException) {
+			$this->reportBlockAuxiliaryFailure(($isUnavailable ? '503' : '403') . ' response rendering', $renderException);
+		}
+		return $response;
+	}
+
+	/**
+	 * Send a status header with a direct header fallback.
+	 * PHP normally emits a warning when a header cannot be sent, but a custom error handler may
+	 * convert that warning to an exception.
+	 * @param int $status
+	 * @param string $fallbackHeader
+	 * @return void
+	 */
+	protected function sendStatusHeader($status, $fallbackHeader) {
+		try {
+			wfWAFUtils::statusHeader($status);
+		}
+		catch (Exception $statusException) {
+			$this->reportBlockAuxiliaryFailure('block status header', $statusException);
+			$this->sendRawBlockHeader($fallbackHeader);
+		}
+		catch (Throwable $statusException) {
+			$this->reportBlockAuxiliaryFailure('block status header', $statusException);
+			$this->sendRawBlockHeader($fallbackHeader);
+		}
+	}
+
+	/**
+	 * Send a raw fallback header without allowing a header handler to prevent enforcement.
+	 * PHP normally emits a warning when a header cannot be sent, but a custom error handler may
+	 * convert that warning to an exception.
+	 * @param string $header
+	 * @return void
+	 */
+	protected function sendRawBlockHeader($header) {
+		try {
+			@header($header);
+		}
+		catch (Exception $headerException) {
+			$this->reportBlockAuxiliaryFailure('fallback block header', $headerException);
+		}
+		catch (Throwable $headerException) {
+			$this->reportBlockAuxiliaryFailure('fallback block header', $headerException);
+		}
+	}
+
+	/**
+	 * Send no-cache headers without allowing a header failure to prevent enforcement.
+	 * PHP normally emits a warning when a header cannot be sent, but a custom error handler may
+	 * convert that warning to an exception.
+	 * @return void
+	 */
+	protected function sendNoCacheHeaders() {
+		try {
+			wfWAFUtils::doNotCache();
+		}
+		catch (Exception $cacheException) {
+			$this->reportBlockAuxiliaryFailure('block cache headers', $cacheException);
+		}
+		catch (Throwable $cacheException) {
+			$this->reportBlockAuxiliaryFailure('block cache headers', $cacheException);
+		}
+	}
+
+	/**
+	 * Record an auxiliary block failure without exposing request data or risking enforcement.
+	 * PHP normally emits a warning when error logging fails, but a custom error handler may
+	 * convert that warning to an exception.
+	 * @param string $operation
+	 * @param Exception|Throwable $failure
+	 * @return void
+	 */
+	protected function reportBlockAuxiliaryFailure($operation, $failure) {
+		try {
+			error_log('A WAF block was enforced, but ' . $operation . ' failed (' . get_class($failure) . ').');
+		}
+		catch (Exception $reportingException) {
+			// Do not allow diagnostics to interfere with enforcement.
+		}
+		catch (Throwable $reportingException) {
+			// Do not allow diagnostics to interfere with enforcement.
+		}
 	}
 	
 	public function logAction($event) {

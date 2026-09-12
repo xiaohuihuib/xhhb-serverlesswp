@@ -4,26 +4,31 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
  * @var \WP_User $user The user being edited. Required.
  * @var string $uiStyleContext The UI style context to use. Optional.
  * @var string[] $initialAllowedHostnames The hostnames that will be saved as Allowed Passkey Hostnames. Optional.
+ * @var bool $gracePeriod Whether the user is currently in the passkey grace period. Optional.
+ * @var bool $lockedOut Whether the user is locked out for a missing passkey. Optional.
+ * @var int $requiredAt The passkey requirement activation time. Optional.
  */
 
 $uiStyleContext = isset($uiStyleContext) && is_string($uiStyleContext)
 	? \WordfenceLS\Controller_WordfenceLS::normalize_ui_style_context($uiStyleContext)
 	: \WordfenceLS\Controller_WordfenceLS::shared()->ui_style_context();
-$addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYLE_CONTEXT_CORE
-	? 'wf-fa wf-fa-plus'
-	: 'wfls-fa wfls-fa-plus';
+$addIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('plus', $uiStyleContext);
+$addHeaderIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('plus-circle', $uiStyleContext);
+$gracePeriod = isset($gracePeriod) ? (bool) $gracePeriod : false;
+$lockedOut = isset($lockedOut) ? (bool) $lockedOut : false;
 ?>
 <div class="wfls-block wfls-always-active wfls-flex-item-full-width" data-wfls-ui-style="<?php echo esc_attr($uiStyleContext); ?>">
 	<div class="wfls-block-header wfls-block-header-border-bottom">
 		<div class="wfls-block-header-content">
-			<div class="wfls-block-title">
-				<strong><?php esc_html_e('Add Passkey', 'wordfence'); ?></strong>
+			<div class="wfls-block-title wfls-passkey-card-title">
+				<span class="wfls-passkey-card-title-icon" aria-hidden="true"><i class="<?php echo esc_attr($addHeaderIconClass); ?>"></i></span>
+				<strong><?php esc_html_e('Add a Passkey', 'wordfence'); ?></strong>
 			</div>
 		</div>
 	</div>
-	<div class="wfls-block-content wfls-padding-add-bottom">
-		<p><?php esc_html_e('Use the current browser or device to create a new passkey for this account. This passkey can work across multiple devices, so pick a nickname that will help you identify it later (e.g., the name of your password manager or account provider).', 'wordfence'); ?></p>
-		<div class="wfls-passkey-add-row wfls-add-top">
+	<div class="wfls-block-content">
+		<p><?php esc_html_e('Create a passkey and give it a name so you can identify it later. You may need a separate passkey for each device unless your passkeys sync through a password manager.', 'wordfence'); ?></p>
+		<div class="wfls-passkey-add-row wfls-add-top wfls-add-bottom">
 			<input type="text"
 				   id="wfls-passkey-label"
 				   class="input wfls-input-text wfls-passkey-add-input"
@@ -46,6 +51,15 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 		))->render();
 		?>
 	</div>
+	<?php if ($gracePeriod || $lockedOut): ?>
+		<?php echo \WordfenceLS\Model_View::create('passkey/grace-period', array(
+			'user' => $user,
+			'gracePeriod' => $gracePeriod,
+			'lockedOut' => $lockedOut,
+			'requiredAt' => $requiredAt,
+			'uiStyleContext' => $uiStyleContext,
+		))->render(); ?>
+	<?php endif; ?>
 </div>
 <script type="application/javascript">
 	(function($) {
@@ -73,7 +87,8 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 			}
 
 			function updateEmptyState() {
-				empty.toggle(passkeyList.find('.wfls-passkey-item').length === 0);
+				var isEmpty = passkeyList.find('.wfls-passkey-item').length === 0;
+				empty.toggle(isEmpty);
 			}
 
 			<?php echo \WordfenceLS\Model_View::create('passkey/registration-error-handler')->render(); ?>
@@ -123,6 +138,11 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 										return;
 									}
 
+									var hadPasskeys = passkeyList.find('.wfls-passkey-item').length > 0;
+									if (!hadPasskeys) {
+										window.location.reload();
+										return;
+									}
 									passkeyList.append(finishResponse.item_html);
 									labelField.val('');
 									updateButtonState();

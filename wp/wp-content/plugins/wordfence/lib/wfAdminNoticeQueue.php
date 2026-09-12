@@ -75,11 +75,7 @@ class wfAdminNoticeQueue {
 		if ($target_version === '9.0.0') {
 			$wflsLink = wfUtils::maybeNetworkAdminURL('admin.php?page=WFLS#top#settings');
 			$addPasskeyOnClick = 'wordfenceExt.dismissAdminNoticeAndFollowLink(this); return false;';
-			return '<strong>' . sprintf(
-					/* translators: Wordfence version. */
-					esc_html__('Wordfence has been updated to version %s.', 'wordfence'),
-					esc_html($target_version)
-				) . '</strong> ' .
+			return '<strong>' . esc_html__('Introducing Passkeys with Wordfence', 'wordfence') . '</strong> ' .
 				esc_html__('Wordfence 9 brings support for passkeys for all users. A passkey is a password replacement that validates your identity using touch, facial recognition, a device password, or a PIN. They can be used for sign-in as a simple and secure alternative to a password and two-factor credentials. Passkeys can be enabled for administrators or any other role on the Login Security settings page.', 'wordfence') .
 				'<br>' . '<a class="wf-btn wf-btn-primary wf-btn-sm wf-no-left wf-add-top" href="' . esc_url($wflsLink) . '" onclick="' . esc_attr($addPasskeyOnClick) . '">' . esc_html__('Manage Login Security Settings', 'wordfence') . '</a>';
 		}

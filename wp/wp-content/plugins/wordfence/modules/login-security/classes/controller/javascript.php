@@ -23,6 +23,7 @@ class Controller_Javascript {
 	 */
 	public static function i18nStrings() {
 		return array(
+			'%s ago' => /* translators: Relative time duration. */ __('%s ago', 'wordfence'),
 			'(definitely a human)' => __('(definitely a human)', 'wordfence'),
 			'(probably a bot)' => __('(probably a bot)', 'wordfence'),
 			'(probably a human)' => __('(probably a human)', 'wordfence'),
@@ -36,6 +37,35 @@ class Controller_Javascript {
 			'A reCAPTCHA score equal to or higher than this value will be considered human. Anything lower will be treated as a bot and require additional verification for login and registration.' => __('A reCAPTCHA score equal to or higher than this value will be considered human. Anything lower will be treated as a bot and require additional verification for login and registration.', 'wordfence'),
 			'When no override is set, Wordfence uses this site\'s main domain ("%s") so passkeys can work across its subdomains. To limit passkeys to a specific login hostname, enter it here. For example, "example.com" allows "www.example.com"; "www.example.com" does not allow "example.com" or "login.example.com".' => /* translators: default passkey RP hostname */ __('When no override is set, Wordfence uses this site\'s main domain ("%s") so passkeys can work across its subdomains. To limit passkeys to a specific login hostname, enter it here. For example, "example.com" allows "www.example.com"; "www.example.com" does not allow "example.com" or "login.example.com".', 'wordfence'),
 			'Authentication' => __('Authentication', 'wordfence'),
+			'Advanced Settings' => __('Advanced Settings', 'wordfence'),
+			'Advanced settings' => __('Advanced settings', 'wordfence'),
+			'2FA is available to all roles.' => __('2FA is available to all roles.', 'wordfence'),
+			'2FA is required for one or more roles.' => __('2FA is required for one or more roles.', 'wordfence'),
+			'Add Login Security to WooCommerce and custom account pages. Testing WooCommerce forms after enabling or changing these is recommended to ensure plugin compatibility.' => __('Add Login Security to WooCommerce and custom account pages. Testing WooCommerce forms after enabling or changing these is recommended to ensure plugin compatibility.', 'wordfence'),
+			'All roles are set to Optional.' => __('All roles are set to Optional.', 'wordfence'),
+			'All roles are set to Required.' => __('All roles are set to Required.', 'wordfence'),
+			'Allow users to protect password sign-in with an additional authentication method.' => __('Allow users to protect password sign-in with an additional authentication method.', 'wordfence'),
+			'Allow users to register and sign in with passkeys.' => __('Allow users to register and sign in with passkeys.', 'wordfence'),
+			'Choose whether 2FA is required, optional, or not allowed for each role.' => __('Choose whether 2FA is required, optional, or not allowed for each role.', 'wordfence'),
+			'Choose whether passkeys are disabled, optional, or required for each role.' => __('Choose whether passkeys are disabled, optional, or required for each role.', 'wordfence'),
+			'Configure Grace Period' => __('Configure Grace Period', 'wordfence'),
+			'Enable 2FA' => __('Enable 2FA', 'wordfence'),
+			'Enable passkeys' => __('Enable passkeys', 'wordfence'),
+			'Notifications are disabled because no roles are set to "Required" for passkeys or 2FA.' => __('Notifications are disabled because no roles are set to "Required" for passkeys or 2FA.', 'wordfence'),
+			'Learn more about 2FA' => __('Learn more about 2FA', 'wordfence'),
+			'Learn more about passkeys' => __('Learn more about passkeys', 'wordfence'),
+			'Manage shared login security behavior and administrative options.' => __('Manage shared login security behavior and administrative options.', 'wordfence'),
+			'Off' => __('Off', 'wordfence'),
+			'On' => __('On', 'wordfence'),
+			'Passkeys are available to all roles.' => __('Passkeys are available to all roles.', 'wordfence'),
+			'Passkeys will be enabled and set to Optional for all roles.' => __('Passkeys will be enabled and set to Optional for all roles.', 'wordfence'),
+			'Passkeys will be enabled and set to Optional for your role.' => __('Passkeys will be enabled and set to Optional for your role.', 'wordfence'),
+			'Roles are set to a mix of Optional and Required.' => __('Roles are set to a mix of Optional and Required.', 'wordfence'),
+			'Protect login and registration forms from automated abuse.' => __('Protect login and registration forms from automated abuse.', 'wordfence'),
+			'Show the Login Security menu to all users, even when both passkeys and 2FA are disabled.' => __('Show the Login Security menu to all users, even when both passkeys and 2FA are disabled.', 'wordfence'),
+			'Two-Factor Authentication' => __('Two-Factor Authentication', 'wordfence'),
+			'Who can use passkeys?' => __('Who can use passkeys?', 'wordfence'),
+			'Who can use 2FA?' => __('Who can use 2FA?', 'wordfence'),
 			'Always show Login Security menu' => __('Always show Login Security menu', 'wordfence'),
 			'Allow remembering device for 30 days' => __('Allow remembering device for 30 days', 'wordfence'),
 			'Allowlisted IP addresses that bypass 2FA, passkey requirements, and reCAPTCHA' => __('Allowlisted IP addresses that bypass 2FA, passkey requirements, and reCAPTCHA', 'wordfence'),
@@ -49,7 +79,7 @@ class Controller_Javascript {
 			'Cancel Changes' => __('Cancel Changes', 'wordfence'),
 			'Close' => __('Close', 'wordfence'),
 			'Confirm Requiring Passkeys for Your Role' => __('Confirm Requiring Passkeys for Your Role', 'wordfence'),
-			'Passkey login and registration responses are accepted only from trusted login hostnames and ports. Most sites can leave this list unchanged. Defaults include this site\'s configured Site/Home hostnames and required ports, the Passkey Credential Domain when set, and the base/www hostnames for the domain derived with the Public Suffix List.' => __('Passkey login and registration responses are accepted only from trusted login hostnames and ports. Most sites can leave this list unchanged. Defaults include this site\'s configured Site/Home hostnames and required ports, the Passkey Credential Domain when set, and the base/www hostnames for the domain derived with the Public Suffix List.', 'wordfence'),
+			'Hostnames allowed to register and use passkeys. Most sites can leave the default values unchanged.' => __('Hostnames allowed to register and use passkeys. Most sites can leave the default values unchanged.', 'wordfence'),
 			'Count' => __('Count', 'wordfence'),
 			'Detected IP(s)' => __('Detected IP(s)', 'wordfence'),
 			'days' => __('days', 'wordfence'),
@@ -59,6 +89,8 @@ class Controller_Javascript {
 			'Edit trusted proxies' => __('Edit trusted proxies', 'wordfence'),
 			'e.g., /my-account/' => __('e.g., /my-account/', 'wordfence'),
 			'Enable reCAPTCHA on the login and user registration pages' => __('Enable reCAPTCHA on the login and user registration pages', 'wordfence'),
+			'Enable Now' => __('Enable Now', 'wordfence'),
+			'Enable Passkeys' => __('Enable Passkeys', 'wordfence'),
 			'An error was encountered while trying to authenticate with a passkey. Please try again.' => __('An error was encountered while trying to authenticate with a passkey. Please try again.', 'wordfence'),
 			'An error was encountered while trying to remove the passkey. Please try again.' => __('An error was encountered while trying to remove the passkey. Please try again.', 'wordfence'),
 			'An error was encountered while trying to save the new passkey. Please try again.' => __('An error was encountered while trying to save the new passkey. Please try again.', 'wordfence'),
@@ -85,23 +117,21 @@ class Controller_Javascript {
 			'Error Saving Options' => __('Error Saving Options', 'wordfence'),
 			'Error Sending Notification' => __('Error Sending Notification', 'wordfence'),
 			'Error Starting Passkey Registration' => __('Error Starting Passkey Registration', 'wordfence'),
-			'For roles that require 2FA or a passkey, users will have this many days to set it up. Failure to set up additional authentication during this period will result in the user losing account access. This grace period will apply to new users from the time of account creation. For existing users, this grace period will apply relative to the time at which the requirement is implemented. This grace period will not automatically apply to admins and must be manually enabled for each admin user.' => __('For roles that require 2FA or a passkey, users will have this many days to set it up. Failure to set up additional authentication during this period will result in the user losing account access. This grace period will apply to new users from the time of account creation. For existing users, this grace period will apply relative to the time at which the requirement is implemented. This grace period will not automatically apply to admins and must be manually enabled for each admin user.', 'wordfence'),
-			'Passkeys can be disabled or enabled for each role. You should test logging in with passkeys when enabling them for any role, to be sure there are no conflicts with other login-related plugins or the theme.' => __('Passkeys can be disabled or enabled for each role. You should test logging in with passkeys when enabling them for any role, to be sure there are no conflicts with other login-related plugins or the theme.', 'wordfence'),
-			'There are two choices for enabling passkeys for each role. "Optional" is recommended for most sites:' => __('There are two choices for enabling passkeys for each role. "Optional" is recommended for most sites:', 'wordfence'),
-			'<strong>Optional</strong> means that passkeys are enabled for users of that role but username/password login is still available unless disabled for the user on their Login Security page.' => __('<strong>Optional</strong> means that passkeys are enabled for users of that role but username/password login is still available unless disabled for the user on their Login Security page.', 'wordfence'),
-			'<strong>Required</strong> means username/password access will be <strong>blocked</strong> for all users of that role (unless within a configured grace period). Additionally, when passkeys are required, XML-RPC will be disabled, requiring use of WordPress application passwords for API access instead (enabling if needed).' => __('<strong>Required</strong> means username/password access will be <strong>blocked</strong> for all users of that role (unless within a configured grace period). Additionally, when passkeys are required, XML-RPC will be disabled, requiring use of WordPress application passwords for API access instead (enabling if needed).', 'wordfence'),
+			'Give users time to set up required passkeys or 2FA before access is restricted. Admin users must have the grace period manually enabled.' => __('Give users time to set up required passkeys or 2FA before access is restricted. Admin users must have the grace period manually enabled.', 'wordfence'),
+			'<strong>Before requiring passkeys:</strong> Make sure users have a backup passkey or another way to access their account' => __('<strong>Before requiring passkeys:</strong> Make sure users have a backup passkey or another way to access their account', 'wordfence'),
 			'General' => __('General', 'wordfence'),
 			'Grace Period' => __('Grace Period', 'wordfence'),
+			'Grace period' => __('Grace period', 'wordfence'),
 			'How to get IPs' => __('How to get IPs', 'wordfence'),
 			'If enabled, users with 2FA enabled may choose to be prompted for a code only once every 30 days per device.' => __('If enabled, users with 2FA enabled may choose to be prompted for a code only once every 30 days per device.', 'wordfence'),
 			'If enabled, XML-RPC calls that require authentication will also require a valid 2FA code to be appended to the password. You must choose the "Skipped" option if you use the WordPress app, the Jetpack plugin, or other services that require XML-RPC.' => __('If enabled, XML-RPC calls that require authentication will also require a valid 2FA code to be appended to the password. You must choose the "Skipped" option if you use the WordPress app, the Jetpack plugin, or other services that require XML-RPC.', 'wordfence'),
 			'If disabled, logging in with a username and password will be blocked for this account when a passkey is registered.' => __('If disabled, logging in with a username and password will be blocked for this account when a passkey is registered.', 'wordfence'),
 			'If disabled, XML-RPC requests that attempt authentication will be rejected, whether the user has 2FA enabled or not.' => __('If disabled, XML-RPC requests that attempt authentication will be rejected, whether the user has 2FA enabled or not.', 'wordfence'),
 			'If enabled, all settings and 2FA records will be deleted on deactivation. If later reactivated, all users that previously had 2FA active will need to set it up again.' => __('If enabled, all settings and 2FA records will be deleted on deactivation. If later reactivated, all users that previously had 2FA active will need to set it up again.', 'wordfence'),
-			'In order to use 2FA with the WooCommerce customer role, you must either enable the "WooCommerce integration" option or use the "wordfence_2fa_management" shortcode to provide customers with access to the 2FA management interface. The default interface is only available through WordPress admin pages which are not accessible to users in the customer role.' => __('In order to use 2FA with the WooCommerce customer role, you must either enable the "WooCommerce integration" option or use the "wordfence_2fa_management" shortcode to provide customers with access to the 2FA management interface. The default interface is only available through WordPress admin pages which are not accessible to users in the customer role.', 'wordfence'),
-			'In order to use passkeys with the WooCommerce customer role, you must either enable the "WooCommerce integration" option or use the "wordfence_passkey_management" shortcode to provide customers with access to the passkey management interface. The default interface is only available through WordPress admin pages which are not accessible to users in the customer role.' => __('In order to use passkeys with the WooCommerce customer role, you must either enable the "WooCommerce integration" option or use the "wordfence_passkey_management" shortcode to provide customers with access to the passkey management interface. The default interface is only available through WordPress admin pages which are not accessible to users in the customer role.', 'wordfence'),
 			'Learn More' => __('Learn More', 'wordfence'),
+			'Learn more' => __('Learn more', 'wordfence'),
 			'Log In with a Passkey' => __('Log In with a Passkey', 'wordfence'),
+			'Manage Login Security' => __('Manage Login Security', 'wordfence'),
 			'On multisite installations, passkey roles are currently limited to Super Administrators only' => __('On multisite installations, passkey roles are currently limited to Super Administrators only', 'wordfence'),
 			'NTP' => __('NTP', 'wordfence'),
 			'NTP is a protocol that allows for remote time synchronization. Wordfence Login Security uses this protocol to ensure that it has the most accurate time which is necessary for TOTP-based two-factor authentication.' => __('NTP is a protocol that allows for remote time synchronization. Wordfence Login Security uses this protocol to ensure that it has the most accurate time which is necessary for TOTP-based two-factor authentication.', 'wordfence'),
@@ -114,17 +144,29 @@ class Controller_Javascript {
 			'Note: This feature requires a free site key and secret for the <a href="https://www.google.com/recaptcha/about/" target="_blank" rel="noopener noreferrer">Google reCAPTCHA v3 Service</a>. To set up new reCAPTCHA keys, log into your Google account and go to the <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener noreferrer">reCAPTCHA admin page</a>.' => __('Note: This feature requires a free site key and secret for the <a href="https://www.google.com/recaptcha/about/" target="_blank" rel="noopener noreferrer">Google reCAPTCHA v3 Service</a>. To set up new reCAPTCHA keys, log into your Google account and go to the <a href="https://www.google.com/recaptcha/admin" target="_blank" rel="noopener noreferrer">reCAPTCHA admin page</a>.', 'wordfence'),
 			'Notification Results' => __('Notification Results', 'wordfence'),
 			'Notification Sent' => __('Notification Sent', 'wordfence'),
+			'Not recommended' => __('Not recommended', 'wordfence'),
+			'Optional:' => __('Optional:', 'wordfence'),
+			'RECOMMENDED' => __('RECOMMENDED', 'wordfence'),
+			'Required:' => __('Required:', 'wordfence'),
+			'Test passkey sign-in for each enabled role to check for plugin or theme conflicts' => __('Test passkey sign-in for each enabled role to check for plugin or theme conflicts', 'wordfence'),
+			'Users can sign in with their username and password during the grace period only. After it ends, they must use a passkey' => __('Users can sign in with their username and password during the grace period only. After it ends, they must use a passkey', 'wordfence'),
+			'Users can use passkeys but still can sign in with their password' => __('Users can use passkeys but still can sign in with their password', 'wordfence'),
 			'Notify' => __('Notify', 'wordfence'),
 			'optional' => __('optional', 'wordfence'),
 			'Passkey Credential Domain' => __('Passkey Credential Domain', 'wordfence'),
 			'Passkey Name' => __('Passkey Name', 'wordfence'),
-			'Enter one hostname per line, with an optional port and without a protocol or path. A hostname without a port allows HTTPS port 443. Any other port, including HTTP port 80 for localhost, must be listed explicitly. Only list hostnames and ports that you control and actively serve for login.' => __('Enter one hostname per line, with an optional port and without a protocol or path. A hostname without a port allows HTTPS port 443. Any other port, including HTTP port 80 for localhost, must be listed explicitly. Only list hostnames and ports that you control and actively serve for login.', 'wordfence'),
+			'One hostname per line. HTTPS uses port 443 by default. Specify other ports explicitly.' => __('One hostname per line. HTTPS uses port 443 by default. Specify other ports explicitly.', 'wordfence'),
+			'Controls which domain passkeys are created for. Enter a hostname here only if you need to use a different credential domain. Most sites should leave this unchanged.' => __('Controls which domain passkeys are created for. Enter a hostname here only if you need to use a different credential domain. Most sites should leave this unchanged.', 'wordfence'),
+			'Confirm Disabling Passkeys' => __('Confirm Disabling Passkeys', 'wordfence'),
+			'Confirm Disabling Two-Factor Authentication' => __('Confirm Disabling Two-Factor Authentication', 'wordfence'),
+			'Disabling passkeys will prevent all users from registering or signing in with passkeys. Existing passkeys and role settings will be preserved. Users may sign in using only their username and password without any additional protection.' => __('Disabling passkeys will prevent all users from registering or signing in with passkeys. Existing passkeys and role settings will be preserved. Users may sign in using only their username and password without any additional protection.', 'wordfence'),
+			'Disabling two-factor authentication will prevent all users from signing in with 2FA. Existing 2FA credentials and role settings will be preserved. Users may sign in using only their username and password without any additional protection.' => __('Disabling two-factor authentication will prevent all users from signing in with 2FA. Existing 2FA credentials and role settings will be preserved. Users may sign in using only their username and password without any additional protection.', 'wordfence'),
 			/* translators: Default passkey credential domain. */
-			'Passkeys are created for a credential domain (the WebAuthn Relying Party ID). Most sites should not change this value. By default, Wordfence uses this site\'s main domain ("%s") so passkeys can work on that domain and its subdomains. Enter a hostname here only if you need to use a different credential domain. For example, "example.com" permits passkeys on "www.example.com"; "www.example.com" limits passkeys to "www.example.com" and its subdomains.' => __('Passkeys are created for a credential domain (the WebAuthn Relying Party ID). Most sites should not change this value. By default, Wordfence uses this site\'s main domain ("%s") so passkeys can work on that domain and its subdomains. Enter a hostname here only if you need to use a different credential domain. For example, "example.com" permits passkeys on "www.example.com"; "www.example.com" limits passkeys to "www.example.com" and its subdomains.', 'wordfence'),
+			'By default, Wordfence uses this site\'s main domain ("%s").' => __('By default, Wordfence uses this site\'s main domain ("%s").', 'wordfence'),
 			'Passkey registration could not be completed.' => __('Passkey registration could not be completed.', 'wordfence'),
 			'Passkey Roles' => __('Passkey Roles', 'wordfence'),
-			'Passkey sign-in counter validation' => __('Passkey sign-in counter validation', 'wordfence'),
-			'Passkey sign-in counters can help detect cloned passkeys, but some authenticators report zero or reset counters. The default setting balances strictness and reliability by rejecting non-zero counters that are not higher than the stored counter.' => __('Passkey sign-in counters can help detect cloned passkeys, but some authenticators report zero or reset counters. The default setting balances strictness and reliability by rejecting non-zero counters that are not higher than the stored counter.', 'wordfence'),
+			'Passkey Sign-In Counter Validation' => __('Passkey Sign-In Counter Validation', 'wordfence'),
+			'Determines how Wordfence handles authenticator sign-in counters used to detect cloned passkeys.' => __('Determines how Wordfence handles authenticator sign-in counters used to detect cloned passkeys.', 'wordfence'),
 			'Allow any counter value' => __('Allow any counter value', 'wordfence'),
 			'Reject non-zero counters that do not increase (recommended)' => __('Reject non-zero counters that do not increase (recommended)', 'wordfence'),
 			'Reject counters that do not increase or reset to zero' => __('Reject counters that do not increase or reset to zero', 'wordfence'),
@@ -145,10 +187,11 @@ class Controller_Javascript {
 			'Passkey login could not be completed.' => __('Passkey login could not be completed.', 'wordfence'),
 			'Passkey settings will be added here.' => __('Passkey settings will be added here.', 'wordfence'),
 			'Passkeys' => __('Passkeys', 'wordfence'),
+			'Enable passkeys to choose which user roles can use them and configure additional settings.' => __('Enable passkeys to choose which user roles can use them and configure additional settings.', 'wordfence'),
 			'Relative URL' => __('Relative URL', 'wordfence'),
-			'Requiring passkeys for customers is not recommended as some customers may experience difficulties setting up or using passkey authentication. Instead, using the "Optional" mode for users with the customer role is recommended which will allow customers to use a passkey but will not require them to do so.' => __('Requiring passkeys for customers is not recommended as some customers may experience difficulties setting up or using passkey authentication. Instead, using the "Optional" mode for users with the customer role is recommended which will allow customers to use a passkey but will not require them to do so.', 'wordfence'),
+			'Some customers may have trouble with passkeys. "Optional" lets them sign in with a password or passkey.' => __('Some customers may have trouble with passkeys. "Optional" lets them sign in with a password or passkey.', 'wordfence'),
 			'Requiring passkeys for your role will make your account more secure. However, if you lose access to your passkey, you will not be able to log in to this account at all. We recommend testing your login using another browser or incognito window before you log out in this window.' => __('Requiring passkeys for your role will make your account more secure. However, if you lose access to your passkey, you will not be able to log in to this account at all. We recommend testing your login using another browser or incognito window before you log out in this window.', 'wordfence'),
-			'Requiring 2FA for customers is not recommended as some customers may experience difficulties setting up or using two-factor authentication. Instead, using the "Optional" mode for users with the customer role is recommended which will allow customers to enable 2FA, but will not require them to do so.' => __('Requiring 2FA for customers is not recommended as some customers may experience difficulties setting up or using two-factor authentication. Instead, using the "Optional" mode for users with the customer role is recommended which will allow customers to enable 2FA, but will not require them to do so.', 'wordfence'),
+			'Some customers may have trouble with 2FA. "Optional" lets them choose whether to enable it.' => __('Some customers may have trouble with 2FA. "Optional" lets them choose whether to enable it.', 'wordfence'),
 			'Reset' => __('Reset', 'wordfence'),
 			'Reset Score Statistics' => __('Reset Score Statistics', 'wordfence'),
 			'Require 2FA for XML-RPC call authentication' => __('Require 2FA for XML-RPC call authentication', 'wordfence'),
@@ -156,14 +199,26 @@ class Controller_Javascript {
 			'Remove Passkey' => __('Remove Passkey', 'wordfence'),
 			'Run reCAPTCHA in test mode' => __('Run reCAPTCHA in test mode', 'wordfence'),
 			'Role' => __('Role', 'wordfence'),
+			'Roles' => __('Roles', 'wordfence'),
+			'Users' => __('Users', 'wordfence'),
+			'Active' => __('Active', 'wordfence'),
+			'Inactive' => __('Inactive', 'wordfence'),
+			'Total' => __('Total', 'wordfence'),
+			'View users' => __('View users', 'wordfence'),
+			'* User counts currently only reflect the main site on multisite installations.' => __('* User counts currently only reflect the main site on multisite installations.', 'wordfence'),
+			'User counts are hidden by default on sites with large numbers of users in order to improve performance.' => __('User counts are hidden by default on sites with large numbers of users in order to improve performance.', 'wordfence'),
+			'User counts are currently disabled as the most recent attempt to count users failed to complete successfully.' => __('User counts are currently disabled as the most recent attempt to count users failed to complete successfully.', 'wordfence'),
+			'Show User Counts' => __('Show User Counts', 'wordfence'),
+			'Try Again' => __('Try Again', 'wordfence'),
 			'Save' => __('Save', 'wordfence'),
 			'Save Changes' => __('Save Changes', 'wordfence'),
+			'Save your changes before switching tabs?' => __('Save your changes before switching tabs?', 'wordfence'),
 			'Send Anyway' => __('Send Anyway', 'wordfence'),
 			'Send Notifications' => __('Send Notifications', 'wordfence'),
-			'Send an email to users with the selected role to notify them of the grace period for adding additional authentication. You may optionally specify the URL to be sent in the email; if left blank, the URL defaults to Wordfence\'s Login Security page. For example, if using WooCommerce, input the relative URL of the account page.' => __('Send an email to users with the selected role to notify them of the grace period for adding additional authentication. You may optionally specify the URL to be sent in the email; if left blank, the URL defaults to Wordfence\'s Login Security page. For example, if using WooCommerce, input the relative URL of the account page.', 'wordfence'),
+			'Email users in the selected role to remind them to set up required authentication. Optionally specify the URL to be sent in the email; blank defaults to Wordfence’s Login Security page.' => __('Email users in the selected role to remind them to set up required authentication. Optionally specify the URL to be sent in the email; blank defaults to Wordfence’s Login Security page.', 'wordfence'),
 			'Setting the grace period to 0 will prevent users in roles where 2FA or a passkey is required, including newly created users, from logging in if they have not already enabled it.' => __('Setting the grace period to 0 will prevent users in roles where 2FA or a passkey is required, including newly created users, from logging in if they have not already enabled it.', 'wordfence'),
 			'Skipped' => __('Skipped', 'wordfence'),
-			'Show Wordfence Login Security menu on WooCommerce Account page' => __('Show Wordfence Login Security menu on WooCommerce Account page', 'wordfence'),
+			'Show Wordfence Passkeys and Wordfence 2FA menus on WooCommerce Account page' => __('Show Wordfence Passkeys and Wordfence 2FA menus on WooCommerce Account page', 'wordfence'),
 			'Show last login column on WP Users page' => __('Show last login column on WP Users page', 'wordfence'),
 			'The constant WORDFENCE_LS_DISABLE_NTP is defined which disables NTP entirely. Remove this constant or set it to a falsy value to enable NTP.' => __('The constant WORDFENCE_LS_DISABLE_NTP is defined which disables NTP entirely. Remove this constant or set it to a falsy value to enable NTP.', 'wordfence'),
 			'The public suffix list is already up to date.' => __('The public suffix list is already up to date.', 'wordfence'),
@@ -172,6 +227,11 @@ class Controller_Javascript {
 			'These IPs (or CIDR ranges) will be ignored when determining the requesting IP via the X-Forwarded-For HTTP header. Enter one IP or CIDR range per line.' => __('These IPs (or CIDR ranges) will be ignored when determining the requesting IP via the X-Forwarded-For HTTP header. Enter one IP or CIDR range per line.', 'wordfence'),
 			'Two Factor Authentication is required only for username/password login when enabled. Passkeys are a substitute for this secondary authentication method.' => __('Two Factor Authentication is required only for username/password login when enabled. Passkeys are a substitute for this secondary authentication method.', 'wordfence'),
 			'Trusted Proxies' => __('Trusted Proxies', 'wordfence'),
+			'Keep Editing' => __('Keep Editing', 'wordfence'),
+			'just now' => __('just now', 'wordfence'),
+			'less than 1 second' => __('less than 1 second', 'wordfence'),
+			'opens in new tab' => __('opens in new tab', 'wordfence'),
+			'Unsaved Changes' => __('Unsaved Changes', 'wordfence'),
 			'Update Public Suffix List' => __('Update Public Suffix List', 'wordfence'),
 			'Updating the public suffix list would change this site\'s default passkey credential domain. Existing passkeys may stop working unless a Passkey Credential Domain is set. Allow this update to be saved?' => __('Updating the public suffix list would change this site\'s default passkey credential domain. Existing passkeys may stop working unless a Passkey Credential Domain is set. Allow this update to be saved?', 'wordfence'),
 			'This browser does not support passkey login.' => __('This browser does not support passkey login.', 'wordfence'),
@@ -180,14 +240,14 @@ class Controller_Javascript {
 			'This option is unavailable because passkeys are required for one or more of this user\'s roles.' => __('This option is unavailable because passkeys are required for one or more of this user\'s roles.', 'wordfence'),
 			'NOTE: This option is currently overridden by the global role requirement' => __('NOTE: This option is currently overridden by the global role requirement', 'wordfence'),
 			'This option cannot be changed because passkeys are required for one or more of this user\'s roles.' => __('This option cannot be changed because passkeys are required for one or more of this user\'s roles.', 'wordfence'),
+			'Enable 2FA to choose which user roles can use it and configure additional settings.' => __('Enable 2FA to choose which user roles can use it and configure additional settings.', 'wordfence'),
 			'User Options' => __('User Options', 'wordfence'),
 			'Use single-column layout for WooCommerce/shortcode Login Security management interface' => __('Use single-column layout for WooCommerce/shortcode Login Security management interface', 'wordfence'),
-			'When setting any role to required, especially for higher access roles such as Administrators, it is highly recommended for each user to have at least one backup passkey and to test logging in with a passkey in a separate browser or browser session (such as in a private browsing mode). This ensures each user\'s passkey(s) work as expected and users within the role are not prevented from logging in.' => __('When setting any role to required, especially for higher access roles such as Administrators, it is highly recommended for each user to have at least one backup passkey and to test logging in with a passkey in a separate browser or browser session (such as in a private browsing mode). This ensures each user\'s passkey(s) work as expected and users within the role are not prevented from logging in.', 'wordfence'),
-			'When enabled, a Wordfence Login Security tab will be added to the WooCommerce account menu which will provide access for users to manage passkey and 2FA credentials outside of the WordPress admin area. Testing the WooCommerce account interface after enabling this feature is recommended to ensure theme compatibility.' => __('When enabled, a Wordfence Login Security tab will be added to the WooCommerce account menu which will provide access for users to manage passkey and 2FA credentials outside of the WordPress admin area. Testing the WooCommerce account interface after enabling this feature is recommended to ensure theme compatibility.', 'wordfence'),
-			'When enabled, reCAPTCHA and 2FA prompt support will be added to WooCommerce login and registration forms in addition to the default WordPress forms. Testing WooCommerce forms after enabling this feature is recommended to ensure plugin compatibility.' => __('When enabled, reCAPTCHA and 2FA prompt support will be added to WooCommerce login and registration forms in addition to the default WordPress forms. Testing WooCommerce forms after enabling this feature is recommended to ensure plugin compatibility.', 'wordfence'),
+			'When enabled, separate Wordfence Passkeys and Wordfence 2FA entries will be added to the WooCommerce account menu so users can manage their credentials outside of the WordPress admin area.' => __('When enabled, separate Wordfence Passkeys and Wordfence 2FA entries will be added to the WooCommerce account menu so users can manage their credentials outside of the WordPress admin area.', 'wordfence'),
+			'When enabled, reCAPTCHA and 2FA prompt support will be added to WooCommerce login and registration forms in addition to the default WordPress forms.' => __('When enabled, reCAPTCHA and 2FA prompt support will be added to WooCommerce login and registration forms in addition to the default WordPress forms.', 'wordfence'),
 			'When enabled, the "wordfence_passkey_management" and "wordfence_2fa_management" shortcodes may be used to provide access for users to manage passkey and 2FA credentials on custom pages.' => __('When enabled, the "wordfence_passkey_management" and "wordfence_2fa_management" shortcodes may be used to provide access for users to manage passkey and 2FA credentials on custom pages.', 'wordfence'),
 			'When enabled, roles can see the Login Security menu even when both passkeys and 2FA are disabled for that role. This also controls whether users will see messages indicating any disabled authentication methods.' => __('When enabled, roles can see the Login Security menu even when both passkeys and 2FA are disabled for that role. This also controls whether users will see messages indicating any disabled authentication methods.', 'wordfence'),
-			'Wordfence uses the public suffix list to determine the default passkey credential domain based on this site\'s full URL. You do not generally need to run updates on this beyond the original fetching of the list but may if any significant changes have occurred to the hostname used by this site.' => __('Wordfence uses the public suffix list to determine the default passkey credential domain based on this site\'s full URL. You do not generally need to run updates on this beyond the original fetching of the list but may if any significant changes have occurred to the hostname used by this site.', 'wordfence'),
+			'Used to determine the default passkey credential domain. Usually does not need to be updated manually.' => __('Used to determine the default passkey credential domain. Usually does not need to be updated manually.', 'wordfence'),
 			'When enabled, the passkey and 2FA management interfaces embedded through the WooCommerce integration or via a shortcode will use a vertical stacked layout as opposed to horizontal columns. Adjust this setting as appropriate to match your theme. This may be overridden using the "stacked" attribute for individual shortcodes.' => __('When enabled, the passkey and 2FA management interfaces embedded through the WooCommerce integration or via a shortcode will use a vertical stacked layout as opposed to horizontal columns. Adjust this setting as appropriate to match your theme. This may be overridden using the "stacked" attribute for individual shortcodes.', 'wordfence'),
 			'When enabled, the last login timestamp will be displayed for each user on the WP Users page. When used in conjunction with reCAPTCHA, the most recent score will also be displayed for each user.' => __('When enabled, the last login timestamp will be displayed for each user on the WP Users page. When used in conjunction with reCAPTCHA, the most recent score will also be displayed for each user.', 'wordfence'),
 			'While in test mode, reCAPTCHA will score login and registration requests but not actually block them. The scores will be recorded and can be used to select a human/bot threshold value.' => __('While in test mode, reCAPTCHA will score login and registration requests but not actually block them. The scores will be recorded and can be used to select a human/bot threshold value.', 'wordfence'),
@@ -203,9 +263,10 @@ class Controller_Javascript {
 	/**
 	 * Returns an array of constants/initial state values for use on the Javascript frontend to avoid hardcoding values.
 	 *
+	 * @param bool $includeUserSummary Whether to include the settings-page user summary data.
 	 * @return array
 	 */
-	public static function jsConstants() {
+	public static function jsConstants($includeUserSummary = false) {
 		if (!Controller_Permissions::shared()->can_manage_settings()) {
 			return array();
 		}
@@ -321,6 +382,64 @@ class Controller_Javascript {
 				);
 			}
 		}
+
+		if ($includeUserSummary) {
+			$userSummaryData = Controller_Users::shared()->get_user_summary_data();
+			$counts = $userSummaryData['counts'];
+			$twoFactorEnabled = $userSummaryData['2fa_enabled'];
+			$passkeysEnabled = $userSummaryData['passkeys_enabled'];
+			$roleCounts = array();
+			if (is_array($counts)) {
+				$roleNames = $roles->get_names();
+				$roleNames['super-admin'] = __('Super Administrator', 'wordfence');
+				$roleNames[Controller_Users::TRUNCATED_ROLE_KEY] = __('Custom Capabilities / Multiple Roles', 'wordfence');
+				foreach ($counts['avail_roles'] as $roleTag => $count) {
+					$count = (int) $count;
+					if ($count === 0) {
+						continue;
+					}
+					$activeCount = $twoFactorEnabled && isset($counts['active_avail_roles'][$roleTag]) ? (int) $counts['active_avail_roles'][$roleTag] : 0;
+					$inactiveCount = max($count - $activeCount, 0);
+					$passkeyActiveCount = $passkeysEnabled && isset($counts['passkey_active_avail_roles'][$roleTag]) ? (int) $counts['passkey_active_avail_roles'][$roleTag] : 0;
+					$roleName = isset($roleNames[$roleTag]) ? $roleNames[$roleTag] : $roleTag;
+					$viewUsersURL = null;
+					if ($inactiveCount > 0 && Controller_Settings::shared()->get_required_2fa_role_activation_time($roleTag) !== false) {
+						$viewUsersBaseURL = 'admin.php?' . http_build_query(array('page' => 'WFLS', 'role' => $roleTag));
+						$viewUsersURL = is_multisite() ? network_admin_url($viewUsersBaseURL) : admin_url($viewUsersBaseURL);
+					}
+					$roleCounts[] = array(
+						'role' => $roleTag,
+						'title' => translate_user_role($roleName),
+						'total_users' => number_format_i18n($count),
+						'active_2fa_users' => number_format_i18n($activeCount),
+						'inactive_2fa_users' => number_format_i18n($inactiveCount),
+						'active_passkey_users' => number_format_i18n($passkeyActiveCount),
+						'inactive_passkey_users' => number_format_i18n(max($count - $passkeyActiveCount, 0)),
+						'view_inactive_2fa_users_url' => $viewUsersURL,
+					);
+				}
+			}
+
+			$totalUsers = is_array($counts) ? (int) $counts['total_users'] : 0;
+			$active2FAUsers = (int) $userSummaryData['active_2fa_users'];
+			$activePasskeyUsers = (int) $userSummaryData['active_passkey_users'];
+			$response['user_summary'] = array(
+				'counts_available' => is_array($counts),
+				'counts_deferred' => $counts === null,
+				'force_counts' => Controller_Users::shared()->should_force_user_counts(),
+				'is_multisite' => is_multisite(),
+				'count_action_url' => add_query_arg('wfls-show-user-counts', 'true') . '#top#settings',
+				'roles' => $roleCounts,
+				'totals' => array(
+					'total_users' => number_format_i18n($totalUsers),
+					'active_2fa_users' => number_format_i18n($active2FAUsers),
+					'inactive_2fa_users' => number_format_i18n(max($totalUsers - $active2FAUsers, 0)),
+					'active_passkey_users' => number_format_i18n($activePasskeyUsers),
+					'inactive_passkey_users' => number_format_i18n(max($totalUsers - $activePasskeyUsers, 0)),
+				),
+			);
+		}
+
 		$response['options'] = array(
 			'roles' => $roleOptions,
 			'passkey_roles' => $passkeyRoleOptions,

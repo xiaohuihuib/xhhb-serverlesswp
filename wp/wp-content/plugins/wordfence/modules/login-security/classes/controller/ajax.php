@@ -57,7 +57,7 @@ class Controller_AJAX {
 	 * @return string
 	 */
 	private static function masked_login_error_message() {
-		if (Controller_Users::shared()->any_passkey_active()) {
+		if (Controller_Settings::shared()->are_passkeys_enabled() && Controller_Users::shared()->any_passkey_active()) {
 			return wp_kses(sprintf(
 				/* translators: 1. Forgot password URL. 2. Passkey recovery help URL. */
 				__('<strong>ERROR</strong>: The username or password you entered is incorrect, or the account you were trying to authenticate as requires logging in using a passkey. <a href="%1$s" title="Password Lost and Found">Lost your password</a> or <a href="%2$s" title="Passkey recovery help">need help with a lost passkey</a>?', 'wordfence'),
@@ -347,6 +347,9 @@ class Controller_AJAX {
 	}
 
 	public function _ajax_begin_passkey_login_callback() {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			self::send_json(array('error' => __('Passkeys are currently disabled.', 'wordfence')));
+		}
 		$rateLimit = Controller_Passkey::shared()->consume_begin_login_rate_limit();
 		if (is_wp_error($rateLimit)) {
 			self::send_json(array('error' => $rateLimit->get_error_message()));
@@ -362,6 +365,9 @@ class Controller_AJAX {
 	}
 
 	public function _ajax_finish_passkey_login_callback() {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			self::send_json(array('error' => __('Passkeys are currently disabled.', 'wordfence')));
+		}
 		$token = isset($_POST['token']) && is_string($_POST['token']) ? $_POST['token'] : '';
 		$credential = isset($_POST['credential']) && is_array($_POST['credential']) ? $_POST['credential'] : null;
 		$remember = false;
@@ -462,6 +468,9 @@ class Controller_AJAX {
 	}
 	
 	public function _ajax_activate_callback() {
+		if (!Controller_Settings::shared()->is_2fa_enabled()) {
+			self::send_json(array('error' => __('Two-factor authentication is currently disabled.', 'wordfence')));
+		}
 		$userID = (int) Utility_Array::arrayGet($_POST, 'user', 0);
 		$user = wp_get_current_user();
 		if ($user->ID != $userID) {
@@ -656,6 +665,7 @@ class Controller_AJAX {
 		if (!Controller_Passkey::shared()->set_username_password_auth_enabled($user, $enabled)) {
 			self::send_json(array('error' => __('Unable to save the user-specific passkey options.', 'wordfence')));
 		}
+		$enabled = Controller_Passkey::shared()->is_username_password_auth_enabled($user);
 
 		self::send_json(array(
 			'saved' => 1,

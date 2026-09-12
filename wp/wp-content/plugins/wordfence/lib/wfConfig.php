@@ -216,14 +216,12 @@ class wfConfig {
 			'needsNewTour_scan' => array('value' => true, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsNewTour_blocking' => array('value' => true, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsNewTour_livetraffic' => array('value' => true, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
-			'needsNewTour_loginsecurity' => array('value' => true, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsNewTour_auditlog' => array('value' => true, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_dashboard' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_firewall' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_scan' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_blocking' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_livetraffic' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
-			'needsUpgradeTour_loginsecurity' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'needsUpgradeTour_auditlog' => array('value' => false, 'autoload' => self::AUTOLOAD, 'validation' => array('type' => self::TYPE_BOOL)),
 			'supportContent' => array('value' => '{}', 'autoload' => self::DONT_AUTOLOAD, 'validation' => array('type' => self::TYPE_STRING)),
 			'supportHash' => array('value' => '', 'autoload' => self::DONT_AUTOLOAD, 'validation' => array('type' => self::TYPE_STRING)),
@@ -2093,7 +2091,7 @@ Options -ExecCGI
 				}
 				else if ((isset(self::$defaultConfig['otherParams'][$key]) && (self::$defaultConfig['otherParams'][$key]['validation']['type'] == self::TYPE_FLOAT || self::$defaultConfig['otherParams'][$key]['validation']['type'] == self::TYPE_DOUBLE)) ||
 						 (isset(self::$defaultConfig['defaultsOnly'][$key]) && (self::$defaultConfig['defaultsOnly'][$key]['validation']['type'] == self::TYPE_FLOAT || self::$defaultConfig['defaultsOnly'][$key]['validation']['type'] == self::TYPE_DOUBLE))) {
-					wfConfig::set($key, (double) $value);
+					wfConfig::set($key, (float) $value);
 				}
 				else if ((isset(self::$defaultConfig['otherParams'][$key]) && self::$defaultConfig['otherParams'][$key]['validation']['type'] == self::TYPE_STRING) ||
 						 (isset(self::$defaultConfig['defaultsOnly'][$key]) && self::$defaultConfig['defaultsOnly'][$key]['validation']['type'] == self::TYPE_STRING)) {

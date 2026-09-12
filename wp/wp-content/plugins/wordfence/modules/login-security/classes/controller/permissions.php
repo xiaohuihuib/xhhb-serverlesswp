@@ -29,12 +29,24 @@ class Controller_Permissions {
 		return $_shared;
 	}
 	
-	public function install() {
+	/**
+	 * Installs required capabilities and initializes optional authentication roles when requested.
+	 *
+	 * @param bool $initialize2FARoles Whether every supported 2FA role should start as optional.
+	 * @param bool $initializePasskeyRoles Whether every supported passkey role should start as optional.
+	 * @return void
+	 */
+	public function install($initialize2FARoles = false, $initializePasskeyRoles = false) {
 		$this->_on_role_change();
 		if (is_multisite()) {
 			//Super Admin automatically gets all capabilities, so we don't need to explicitly add them
 			$this->_add_cap_multisite('administrator', self::CAP_ACTIVATE_2FA_SELF, $this->get_primary_sites());
 			$this->_add_cap_multisite('administrator', self::CAP_SHOW_LOGIN_SECURITY, $this->get_primary_sites());
+			if ($initialize2FARoles) {
+				foreach ($this->_wp_roles()->get_names() as $roleName => $roleLabel) {
+					$this->allow_2fa_self($roleName);
+				}
+			}
 			$this->sync_login_security_menu_visibility();
 		}
 		else {
@@ -42,6 +54,16 @@ class Controller_Permissions {
 			$this->_add_cap('administrator', self::CAP_ACTIVATE_2FA_OTHERS);
 			$this->_add_cap('administrator', self::CAP_MANAGE_PASSKEY_OTHERS);
 			$this->_add_cap('administrator', self::CAP_MANAGE_SETTINGS);
+			if ($initialize2FARoles || $initializePasskeyRoles) {
+				foreach ($this->_wp_roles()->get_names() as $roleName => $roleLabel) {
+					if ($initialize2FARoles) {
+						$this->allow_2fa_self($roleName);
+					}
+					if ($initializePasskeyRoles) {
+						$this->allow_passkey_self($roleName);
+					}
+				}
+			}
 			$this->_sync_roles();
 		}
 	}

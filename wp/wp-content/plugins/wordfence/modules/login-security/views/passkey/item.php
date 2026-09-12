@@ -8,13 +8,12 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
 $uiStyleContext = isset($uiStyleContext) && is_string($uiStyleContext)
 	? \WordfenceLS\Controller_WordfenceLS::normalize_ui_style_context($uiStyleContext)
 	: \WordfenceLS\Controller_WordfenceLS::shared()->ui_style_context();
-$trashIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYLE_CONTEXT_CORE
-	? 'wf-fa wf-fa-trash'
-	: 'wfls-fa wfls-fa-trash';
+$trashIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('trash', $uiStyleContext);
 $dateSwitchThreshold = 2 * DAY_IN_SECONDS;
 ?>
 <div class="wfls-passkey-item wfls-add-top" data-passkey-id="<?php echo (int) $passkey['id']; ?>">
 	<div class="wfls-passkey-item-row">
+		<span class="wfls-passkey-item-icon wfls-main-icon-passkey" aria-hidden="true"></span>
 		<div class="wfls-passkey-item-details">
 			<strong class="wfls-passkey-item-label"><?php echo esc_html($passkey['label']); ?></strong><br>
 			<small>

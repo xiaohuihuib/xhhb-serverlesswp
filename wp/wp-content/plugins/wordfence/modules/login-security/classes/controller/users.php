@@ -38,7 +38,8 @@ class Controller_Users {
 	private $active2FAUserIDsCache = null;
 	private $activePasskeyUserIDsCache = null;
 	private $userQueryFilterModes = array();
-	
+	private $userSummaryDataCache = null;
+
 	/**
 	 * Returns the singleton Controller_Users.
 	 *
@@ -51,11 +52,11 @@ class Controller_Users {
 		}
 		return $_shared;
 	}
-	
+
 	public function init() {
 		$this->_init_actions();
 	}
-	
+
 	/**
 	 * Imports the array of 2FA secrets. Users that do not currently exist or are disallowed from enabling 2FA are not imported.
 	 *
@@ -65,7 +66,7 @@ class Controller_Users {
 	public function import_2fa($secrets) {
 		global $wpdb;
 		$table = Controller_DB::shared()->secrets;
-		
+
 		$count = 0;
 		foreach ($secrets as $id => $parameters) {
 			$user = new \WP_User($id);
@@ -77,12 +78,12 @@ class Controller_Users {
 			$type = $parameters['type'];
 			if ($wpdb->query($wpdb->prepare("INSERT INTO `{$table}` (`user_id`, `secret`, `recovery`, `ctime`, `vtime`, `mode`) VALUES (%d, %s, %s, %d, %d, %s)", $user->ID, $secret, $recovery, $ctime, $vtime, $type)) !== false) {
 				$this->clear_2fa_active_cache($user->ID);
+				$count++;
 			}
-			$count++;
 		}
 		return $count;
 	}
-	
+
 	public function admin_users() {
 		//We should eventually allow for any user to be granted the manage capability, but we won't account for that now
 		if (is_multisite()) {
@@ -96,7 +97,7 @@ class Controller_Users {
 			}
 			return $users;
 		}
-		
+
 		$query = new \WP_User_Query(http_build_query(array('role' => 'administrator', 'number' => -1)));
 		return $query->get_results();
 	}
@@ -114,10 +115,10 @@ class Controller_Users {
 			return $query->get_results();
 		}
 	}
-	
+
 	/**
 	 * Returns whether or not the user has a valid remembered device.
-	 * 
+	 *
 	 * @param \WP_User $user
 	 * @return bool
 	 */
@@ -126,11 +127,11 @@ class Controller_Users {
 		if (array_key_exists($userID, $this->remembered2FACache)) {
 			return $this->remembered2FACache[$userID];
 		}
-		
+
 		if (!Controller_Settings::shared()->get_bool(Controller_Settings::OPTION_REMEMBER_DEVICE_ENABLED)) {
 			return false;
 		}
-		
+
 		foreach ($_COOKIE as $name => $value) {
 			$rememberedDevice = $this->decode_remembered_device_cookie($name, $value);
 			if ($rememberedDevice === false || $rememberedDevice['user'] !== (string) $user->ID) {
@@ -147,17 +148,17 @@ class Controller_Users {
 		$this->remembered2FACache[$userID] = false;
 		return false;
 	}
-	
+
 	/**
 	 * Sets the cookie needed to remember the 2FA status.
-	 * 
+	 *
 	 * @param \WP_User $user
 	 */
 	public function remember_2fa($user) {
 		if (!Controller_Settings::shared()->get_bool(Controller_Settings::OPTION_REMEMBER_DEVICE_ENABLED)) {
 			return;
 		}
-		
+
 		if ($this->has_remembered_2fa($user)) {
 			return;
 		}
@@ -166,12 +167,12 @@ class Controller_Users {
 		if ($enrollmentID === false) {
 			return;
 		}
-		
+
 		$cookie = $this->create_remembered_device_cookie($user, $enrollmentID);
 		if ($cookie === false) { //Can't generate cookie due to host failure
 			return;
 		}
-		
+
 		//Remove legacy, invalid, and superseded cookies, while preserving cookies for other users
 		foreach ($_COOKIE as $name => $value) {
 			if (!$this->should_remove_remembered_device_cookie($name, $value, $user)) {
@@ -179,7 +180,7 @@ class Controller_Users {
 			}
 			setcookie($name, '', \WordfenceLS\Controller_Time::time() - 86400, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
 		}
-		
+
 		//Set the new one
 		setcookie($cookie['name'], $cookie['value'], $cookie['expiration'], COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
 	}
@@ -269,7 +270,7 @@ class Controller_Users {
 		$rememberedDevice = $this->decode_remembered_device_cookie($name, $value);
 		return $rememberedDevice === false || $rememberedDevice['user'] === (string) $user->ID;
 	}
-	
+
 	/**
 	 * Returns whether or not 2FA can be activated on the given user.
 	 *
@@ -277,14 +278,17 @@ class Controller_Users {
 	 * @return bool
 	 */
 	public function can_activate_2fa($user) {
+		if (!Controller_Settings::shared()->is_2fa_enabled()) {
+			return false;
+		}
 		if (is_multisite() && !is_super_admin($user->ID)) {
 			return Controller_Permissions::shared()->does_user_have_multisite_capability($user, Controller_Permissions::CAP_ACTIVATE_2FA_SELF);
 		}
 		return user_can($user, Controller_Permissions::CAP_ACTIVATE_2FA_SELF);
 	}
-	
+
 	/**
-	 * Returns whether or not any user has 2FA activated.
+	 * Returns whether any stored 2FA enrollment exists, independent of global availability.
 	 *
 	 * @return bool
 	 */
@@ -297,7 +301,7 @@ class Controller_Users {
 		}
 		return $this->any2FAActiveCache;
 	}
-	
+
 	/**
 	 * Returns whether or not the user has 2FA activated.
 	 *
@@ -308,7 +312,16 @@ class Controller_Users {
 		if (!$this->can_activate_2fa($user)) {
 			return false;
 		}
+		return $this->has_2fa_enrollment($user);
+	}
 
+	/**
+	 * Returns whether the user has a stored 2FA enrollment, independent of global availability.
+	 *
+	 * @param \WP_User $user
+	 * @return bool
+	 */
+	public function has_2fa_enrollment($user) {
 		$userID = (int) $user->ID;
 		if (!array_key_exists($userID, $this->has2FAActiveCache)) {
 			global $wpdb;
@@ -328,13 +341,22 @@ class Controller_Users {
 	 * @return string|bool The enrollment identifier, or false if 2FA is not active.
 	 */
 	private function two_factor_enrollment_id($user) {
+		if (!$this->can_activate_2fa($user)) {
+			return false;
+		}
 		$userID = (int) $user->ID;
 		if (!array_key_exists($userID, $this->twoFactorEnrollmentIDCache)) {
-			$this->has_2fa_active($user);
+			$this->has_2fa_enrollment($user);
 		}
 		return array_key_exists($userID, $this->twoFactorEnrollmentIDCache) ? $this->twoFactorEnrollmentIDCache[$userID] : false;
 	}
 
+	/**
+	 * Clears cached 2FA enrollment and remembered-device state.
+	 *
+	 * @param int|null $userID The user to clear, or null to clear all users.
+	 * @return void
+	 */
 	public function clear_2fa_active_cache($userID = null) {
 		if ($userID === null) {
 			$this->has2FAActiveCache = array();
@@ -349,6 +371,12 @@ class Controller_Users {
 		$this->active2FAUserIDsCache = null;
 	}
 
+	/**
+	 * Clears cached passkey activation state.
+	 *
+	 * @param int|null $userID The user to clear, or null to clear all users.
+	 * @return void
+	 */
 	public function clear_passkey_active_cache($userID = null) {
 		if ($userID === null) {
 			$this->hasPasskeyActiveCache = array();
@@ -360,15 +388,26 @@ class Controller_Users {
 		$this->activePasskeyUserIDsCache = null;
 	}
 
+	/**
+	 * Clears all cached active authentication state.
+	 *
+	 * @return void
+	 */
 	public function clear_active_authentication_cache() {
 		$this->clear_2fa_active_cache();
 		$this->clear_passkey_active_cache();
 	}
 
+	/**
+	 * Returns whether a request contains a valid active-state user filter.
+	 *
+	 * @param string $requestKey The request parameter to inspect.
+	 * @return bool
+	 */
 	private function has_user_id_activity_filter($requestKey) {
 		return isset($_REQUEST[$requestKey]) && preg_match('/^(?:in)?active$/i', $_REQUEST[$requestKey]) === 1;
 	}
-	
+
 	/**
 	 * Deactivates a user.
 	 *
@@ -380,7 +419,7 @@ class Controller_Users {
 		if ($wpdb->query($wpdb->prepare("DELETE FROM `{$table}` WHERE `user_id` = %d", $user->ID)) !== false) {
 			$this->clear_2fa_active_cache($user->ID);
 		}
-		
+
 		/**
 		 * Fires when 2FA is disabled for a user.
 		 *
@@ -424,13 +463,18 @@ class Controller_Users {
 	/**
 	 * Returns whether or not 2FA is required for the user regardless of activation status. 2FA is considered required
 	 * when the option to require it is enabled and there is at least one administrator with it active.
-	 * 
+	 *
 	 * @param \WP_User $user
 	 * @param bool &$gracePeriod
 	 * @param int &$requiredAt
 	 * @return bool
 	 */
 	public function requires_2fa($user, &$gracePeriod = false, &$requiredAt = null) {
+		if (!Controller_Settings::shared()->is_2fa_enabled()) {
+			$gracePeriod = false;
+			$requiredAt = null;
+			return false;
+		}
 		static $cache = array();
 		if (array_key_exists($user->ID, $cache)) {
 			list($required, $gracePeriod, $requiredAt) = $cache[$user->ID];
@@ -444,7 +488,7 @@ class Controller_Users {
 			return $required;
 		}
 	}
-	
+
 	/**
 	 * Returns whether or not a passkey is required for the user regardless of activation status. A passkey is
 	 * considered required when the option to require it is enabled and there is at least one administrator with it
@@ -456,6 +500,11 @@ class Controller_Users {
 	 * @return bool
 	 */
 	public function requires_passkey($user, &$gracePeriod = false, &$requiredAt = null) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			$gracePeriod = false;
+			$requiredAt = null;
+			return false;
+		}
 		static $cache = array();
 		if (array_key_exists($user->ID, $cache)) {
 			list($required, $gracePeriod, $requiredAt) = $cache[$user->ID];
@@ -469,7 +518,7 @@ class Controller_Users {
 			return $required;
 		}
 	}
-	
+
 	/**
 	 * Returns whether or not additional authentication (2FA or passkey) is missing and required now.
 	 *
@@ -552,7 +601,7 @@ class Controller_Users {
 
 		return $methods;
 	}
-	
+
 	/**
 	 * Returns the number of recovery codes remaining for the user or null if the user does not have 2FA active.
 	 *
@@ -566,10 +615,10 @@ class Controller_Users {
 		if (!$record) {
 			return 0;
 		}
-		
+
 		return intdiv(Model_Crypto::strlen($record), self::RECOVERY_CODE_SIZE);
 	}
-	
+
 	/**
 	 * Generates a new set of recovery codes and saves them to $user if provided.
 	 *
@@ -583,16 +632,16 @@ class Controller_Users {
 			$c = \WordfenceLS\Model_Crypto::random_bytes(self::RECOVERY_CODE_SIZE);
 			$codes[] = $c;
 		}
-		
+
 		if ($user && Controller_Users::shared()->has_2fa_active($user)) {
 			global $wpdb;
 			$table = Controller_DB::shared()->secrets;
 			$wpdb->query($wpdb->prepare("UPDATE `{$table}` SET `recovery` = %s WHERE `user_id` = %d", implode('', $codes), $user->ID));
 		}
-		
+
 		return $codes;
 	}
-	
+
 	/**
 	 * Returns whether or not a passkey can be managed on the given user.
 	 *
@@ -600,14 +649,17 @@ class Controller_Users {
 	 * @return bool
 	 */
 	public function can_manage_passkey($user) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			return false;
+		}
 		if (is_multisite() && !is_super_admin($user->ID)) {
 			return Controller_Permissions::shared()->does_user_have_multisite_capability($user, Controller_Permissions::CAP_MANAGE_PASSKEY_SELF);
 		}
 		return user_can($user, Controller_Permissions::CAP_MANAGE_PASSKEY_SELF);
 	}
-	
+
 	/**
-	 * Returns whether or not any user has a passkey activated.
+	 * Returns whether any stored passkey exists, independent of global availability.
 	 *
 	 * @return bool
 	 */
@@ -620,7 +672,7 @@ class Controller_Users {
 		}
 		return $this->anyPasskeyActiveCache;
 	}
-	
+
 	/**
 	 * Returns whether or not the user has 2FA activated.
 	 *
@@ -631,7 +683,16 @@ class Controller_Users {
 		if (!$this->can_manage_passkey($user)) {
 			return false;
 		}
+		return $this->has_registered_passkey($user);
+	}
 
+	/**
+	 * Returns whether the user has a stored passkey, independent of global availability.
+	 *
+	 * @param \WP_User $user
+	 * @return bool
+	 */
+	public function has_registered_passkey($user) {
 		$userID = (int) $user->ID;
 		if (!array_key_exists($userID, $this->hasPasskeyActiveCache)) {
 			global $wpdb;
@@ -641,19 +702,19 @@ class Controller_Users {
 		}
 		return $this->hasPasskeyActiveCache[$userID];
 	}
-	
+
 	/**
 	 * Records the reCAPTCHA score for later display.
-	 * 
-	 * This is not atomic, which means this can miscount on hits that overlap, but the overhead of being atomic is not 
+	 *
+	 * This is not atomic, which means this can miscount on hits that overlap, but the overhead of being atomic is not
 	 * worth it for our use.
-	 * 
+	 *
 	 * @param \WP_User $user|null
 	 * @param float $score
 	 */
 	public function record_captcha_score($user, $score) {
 		if (!Controller_CAPTCHA::shared()->enabled()) { return; }
-		
+
 		if ($user) { update_user_meta($user->ID, 'wfls-last-captcha-score', $score); }
 		$stats = Controller_Settings::shared()->get_array(Controller_Settings::OPTION_CAPTCHA_STATS, array());
 		if (!array_key_exists('counts', $stats)) { $stats['counts'] = array_fill(0, 10, 0); }
@@ -664,10 +725,10 @@ class Controller_Users {
 		$stats['avg'] = ($stats['avg'] * $count + $int_score) / ($count + 1);
 		Controller_Settings::shared()->set(Controller_Settings::OPTION_CAPTCHA_STATS, $stats);
 	}
-	
+
 	/**
 	 * Returns the active and inactive user counts.
-	 * 
+	 *
 	 * @return array
 	 */
 	public function user_counts() {
@@ -687,10 +748,10 @@ class Controller_Users {
 			'passkey_inactive_users' => max($total_users - $passkey_active_users, 0)
 		);
 	}
-	
+
 	public function detailed_user_counts($force = false) {
 		global $wpdb;
-		
+
 		$blog_prefix = $wpdb->get_blog_prefix();
 		$wp_roles = new \WP_Roles();
 		$roles = $wp_roles->get_names();
@@ -817,10 +878,10 @@ SQL
 			foreach(get_super_admins() as $username) {
 				$superAdmins++;
 				$user = new \WP_User($username);
-				if ($this->has_2fa_active($user)) {
+				if ($this->has_2fa_enrollment($user)) {
 					$activeSuperAdmins++;
 				}
-				if ($this->has_passkey_active($user)) {
+				if ($this->has_registered_passkey($user)) {
 					$passkeySuperAdmins++;
 				}
 			}
@@ -828,17 +889,17 @@ SQL
 			$counts['active_avail_roles']['super-admin'] = $activeSuperAdmins;
 			$counts['passkey_active_avail_roles']['super-admin'] = $passkeySuperAdmins;
 		}
-		
+
 		$counts['total_users'] = $groups['avail_roles'];
 		$counts['active_total_users'] = $groups['active_avail_roles'];
 		$counts['passkey_active_total_users'] = $groups['passkey_active_avail_roles'];
 
 		return $counts;
 	}
-	
+
 	/**
 	 * Returns the number of users with 2FA active.
-	 * 
+	 *
 	 * @return int
 	 */
 	public function active_count() {
@@ -846,7 +907,7 @@ SQL
 		$table = Controller_DB::shared()->secrets;
 		return intval($wpdb->get_var("SELECT COUNT(DISTINCT `user_id`) FROM `{$table}`"));
 	}
-	
+
 	/**
 	 * Returns the number of users with a passkey active.
 	 *
@@ -857,11 +918,11 @@ SQL
 		$table = Controller_DB::shared()->passkeys;
 		return intval($wpdb->get_var("SELECT COUNT(DISTINCT `user_id`) FROM `{$table}`"));
 	}
-	
+
 	/**
 	 * WP Filters/Actions
 	 */
-	
+
 	protected function _init_actions() {
 		add_action('deleted_user', array($this, '_deleted_user'));
 		add_filter('manage_users_columns', array($this, '_manage_users_columns'));
@@ -871,7 +932,7 @@ SQL
 		add_filter('users_list_table_query_args', array($this, '_users_list_table_query_args'));
 		add_filter('user_row_actions', array($this, '_user_row_actions'), 10, 2);
 		add_filter('views_users', array($this, '_views_users'));
-		
+
 		if (is_multisite()) {
 			add_filter('manage_users-network_columns', array($this, '_manage_users_columns'));
 			add_filter('manage_users-network_custom_column', array($this, '_manage_users_custom_column'), 10, 3);
@@ -880,7 +941,7 @@ SQL
 			add_filter('views_users-network', array($this, '_views_users'));
 		}
 	}
-	
+
 	public function _deleted_user($id) {
 		$user = new \WP_User($id);
 		if ($user instanceof \WP_User && !$user->exists()) {
@@ -896,7 +957,7 @@ SQL
 			$this->clear_passkey_active_cache($id);
 		}
 	}
-	
+
 	public function _manage_users_columns($columns = array()) {
 		if (user_can(wp_get_current_user(), Controller_Permissions::CAP_ACTIVATE_2FA_OTHERS)) {
 			$columns['wfls_2fa_status'] = esc_html__('2FA Status', 'wordfence');
@@ -904,7 +965,7 @@ SQL
 		if (user_can(wp_get_current_user(), Controller_Permissions::CAP_MANAGE_PASSKEY_OTHERS)) {
 			$columns['wfls_passkey_status'] = esc_html__('Passkey Status', 'wordfence');
 		}
-		
+
 		if (Controller_Settings::shared()->are_login_history_columns_enabled() && Controller_Permissions::shared()->can_manage_settings(wp_get_current_user())) {
 			$columns['wfls_last_login'] = esc_html__('Last Login', 'wordfence');
 			if (Controller_CAPTCHA::shared()->enabled()) {
@@ -913,7 +974,7 @@ SQL
 		}
 		return $columns;
 	}
-	
+
 	public function _manage_users_custom_column($value = '', $column_name = '', $user_id = 0) {
 		switch($column_name) {
 			case 'wfls_2fa_status':
@@ -958,17 +1019,17 @@ SQL
 				}
 				break;
 		}
-		
+
 		return $value;
 	}
-	
+
 	public function _manage_users_sortable_columns($sortable_columns) {
 		return array_merge($sortable_columns, array(
 			'wfls_last_login' => 'wfls-lastlogin',
 			'wfls_last_captcha' => 'wfls-lastcaptcha',
 		));
 	}
-	
+
 	protected function _user_ids_with_2fa_active() {
 		if ($this->active2FAUserIDsCache === null) {
 			global $wpdb;
@@ -995,7 +1056,7 @@ SQL
 		if ($this->has_user_id_activity_filter('wfls-passkey')) {
 			$this->userQueryFilterModes['passkey'] = strtolower($_REQUEST['wfls-passkey']);
 		}
-		
+
 		if (isset($args['orderby'])) {
 			if (is_string($args['orderby'])) {
 				if ($args['orderby'] == 'wfls-lastlogin') {
@@ -1015,7 +1076,7 @@ SQL
 					unset($args['orderby']['wfls-lastlogin']);
 					$has_one = true;
 				}
-				
+
 				if (array_key_exists('wfls-lastcaptcha', $args['orderby'])) {
 					if (!$has_one) { //We have to discard one if both are set to sort by because $meta_key can only be a single value rather than an array
 						$args['meta_key'] = 'wfls-last-captcha-score';
@@ -1024,7 +1085,7 @@ SQL
 					unset($args['orderby']['wfls-lastcaptcha']);
 					$has_one = true;
 				}
-				
+
 				if (in_array('wfls-lastlogin', $args['orderby'])) {
 					if (!$has_one) { //We have to discard one if both are set to sort by because $meta_key can only be a single value rather than an array
 						$args['meta_key'] = 'wfls-last-login';
@@ -1033,7 +1094,7 @@ SQL
 					unset($args['orderby'][array_search('wfls-lastlogin', $args['orderby'])]);
 					$has_one = true;
 				}
-				
+
 				if (in_array('wfls-lastcaptcha', $args['orderby'])) {
 					if (!$has_one) { //We have to discard one if both are set to sort by because $meta_key can only be a single value rather than an array
 						$args['meta_key'] = 'wfls-last-captcha-score';
@@ -1081,7 +1142,7 @@ SQL
 			$query->query_where .= $filter['mode'] == 'inactive' ? " AND NOT {$exists}" : " AND {$exists}";
 		}
 	}
-	
+
 	public function _user_row_actions($actions, $user) {
 		//Format is 'view' => '<a href="https://wfpremium.dev1.ryanbritton.com/author/ryan/" aria-label="View posts by ryan">View</a>'
 		$viewer = wp_get_current_user();
@@ -1094,7 +1155,7 @@ SQL
 		}
 		return $actions;
 	}
-	
+
 	public function _views_users($views) {
 		//Format is 'subscriber' => '<a href=\\'users.php?role=subscriber\\'>Subscriber <span class="count">(40,002)</span></a>',
 		include(ABSPATH . WPINC . '/version.php'); /** @var string $wp_version */
@@ -1112,7 +1173,7 @@ SQL
 		}
 		return $views;
 	}
-	
+
 	private static function get_registration_date($user) {
 		return strtotime($user->user_registered);
 	}
@@ -1132,6 +1193,11 @@ SQL
 	}
 
 	private function does_user_role_require_2fa($user, &$inGracePeriod = null, &$requiredAt = null) {
+		if (!Controller_Settings::shared()->is_2fa_enabled()) {
+			$inGracePeriod = false;
+			$requiredAt = null;
+			return false;
+		}
 		$is2faAdmin = Controller_Permissions::shared()->can_manage_settings($user);
 		$userDate = self::get_grace_period_reset_time($user);
 		if ($userDate === null)
@@ -1168,6 +1234,11 @@ SQL
 	}
 
 	private function does_user_role_require_passkey($user, &$inGracePeriod = null, &$requiredAt = null) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()) {
+			$inGracePeriod = false;
+			$requiredAt = null;
+			return false;
+		}
 		$isPasskeyAdmin = Controller_Permissions::shared()->can_manage_settings($user);
 		$userDate = self::get_grace_period_reset_time($user);
 		if ($userDate === null) {
@@ -1212,7 +1283,7 @@ SQL
 		if (!($this->can_activate_2fa($user) || $this->can_manage_passkey($user))) {
 			return false;
 		}
-		
+
 		$requires2FA = $this->requires_2fa($user, $in2FAGracePeriod);
 		$requiresPasskey = $this->requires_passkey($user, $inPasskeyGracePeriod);
 		$missingRequired2FA = ($requires2FA || $in2FAGracePeriod) && !$this->has_2fa_active($user);
@@ -1220,7 +1291,7 @@ SQL
 		if (!$missingRequired2FA && !$missingRequiredPasskey) {
 			return false;
 		}
-		
+
 		update_user_option($user->ID, self::META_KEY_GRACE_PERIOD_RESET, time(), true);
 		if ($override !== null) {
 			update_user_option($user->ID, self::META_KEY_GRACE_PERIOD_OVERRIDE, (int) $override, true);
@@ -1445,21 +1516,21 @@ SQL;
 		$userId = $this->load_verification_token($hash);
 		return $userId !== null && ($user === null || $userId === $user->ID);
 	}
-	
+
 	/**
 	 * Returns the key used to store a captcha score transient.
-	 * 
+	 *
 	 * @param string $hash
 	 * @return string
 	 */
 	private function get_captcha_score_transient_key($hash) {
 		return self::CAPTCHA_SCORE_TRANSIENT_PREFIX . $hash;
 	}
-	
+
 	/**
-	 * Attempts to look up a stored captcha score for the given hash and user. If found, returns the score. If not, 
+	 * Attempts to look up a stored captcha score for the given hash and user. If found, returns the score. If not,
 	 * returns null.
-	 * 
+	 *
 	 * @param string $hash
 	 * @param \WP_User $user
 	 * @return float|false
@@ -1470,24 +1541,24 @@ SQL;
 		if ($data === false) {
 			return false;
 		}
-		
+
 		if (!$user->exists() || $data['user'] !== $user->ID) {
 			return false;
 		}
-		
+
 		return floatval($data['score']);
 	}
-	
+
 	/**
 	 * Deletes the stored captcha score if present for the given hash.
-	 * 
+	 *
 	 * @param string $hash
 	 */
 	private function clear_captcha_score($token, $user) {
 		$hash = $this->hash_captcha_token($token);
 		$key = $this->get_captcha_score_transient_key($hash);
 		delete_transient($key);
-		
+
 		$storedHashes = get_user_meta($user->ID, self::META_KEY_CAPTCHA_SCORES, true);
 		$validHashes = array();
 		if (is_array($storedHashes)) {
@@ -1501,26 +1572,26 @@ SQL;
 		$validHashes = array_slice($validHashes, 0, self::CAPTCHA_SCORE_LIMIT);
 		update_user_meta($user->ID, self::META_KEY_CAPTCHA_SCORES, $validHashes);
 	}
-	
+
 	/**
 	 * Hashes the captcha token for storage.
-	 * 
+	 *
 	 * @param string $token
 	 * @return string
 	 */
 	private function hash_captcha_token($token) {
 		return wp_hash($token);
 	}
-	
+
 	/**
 	 * Returns the cached score for the given captcha score and user if available. This action removes it from the cache
 	 * since the intent is for it only to be used for the initial login request to validate credentials + the follow-up
 	 * request either finalizing the login (no 2FA set) or with the 2FA token.
-	 * 
+	 *
 	 * $expired will be set to `true` if the reason for returning `false` is because the $token is recently expired. It
 	 * will be false when the $token is either uncached or has been expired long enough to be removed from the internal
 	 * list.
-	 * 
+	 *
 	 * @param string $token
 	 * @param \WP_User $user
 	 * @param bool $expired
@@ -1535,14 +1606,14 @@ SQL;
 				$expired = in_array($hash, $storedHashes);
 			}
 		}
-		
+
 		$this->clear_captcha_score($token, $user);
 		return $score;
 	}
-	
+
 	/**
 	 * Caches the $token/$score pair for $user, automatically pruning its cached list to the maximum allowable count
-	 * 
+	 *
 	 * @param string $token
 	 * @param float|false $score
 	 * @param \WP_User $user
@@ -1551,7 +1622,7 @@ SQL;
 		if ($score === false) {
 			return;
 		}
-		
+
 		$storedHashes = get_user_meta($user->ID, self::META_KEY_CAPTCHA_SCORES, true);
 		$validHashes = array();
 		if (is_array($storedHashes)) {
@@ -1562,14 +1633,14 @@ SQL;
 				}
 			}
 		}
-		
+
 		$hash = $this->hash_verification_token($token);
 		array_unshift($validHashes, $hash);
 		while (count($validHashes) > self::CAPTCHA_SCORE_LIMIT) {
 			$excessHash = array_pop($validHashes);
 			delete_transient($this->get_captcha_score_transient_key($excessHash));
 		}
-		
+
 		$key = $this->get_captcha_score_transient_key($hash);
 		set_transient($key, array('user' => $user->ID, 'score' => $score), self::CAPTCHA_SCORE_CACHE_DURATION);
 		update_user_meta($user->ID, self::META_KEY_CAPTCHA_SCORES, $validHashes);
@@ -1577,9 +1648,35 @@ SQL;
 
 	public function get_user_count() {
 		global $wpdb;
-		if (function_exists('get_user_count'))
+		if (function_exists('get_user_count')) {
 			return get_user_count();
+		}
 		return $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->users}");
+	}
+
+	/**
+	 * Returns the user-count data shared by the settings summary and its JavaScript disclosure.
+	 *
+	 * @return array Summary counts and the detailed role counts when available.
+	 */
+	public function get_user_summary_data() {
+		if ($this->userSummaryDataCache !== null) {
+			return $this->userSummaryDataCache;
+		}
+
+		$knownTotalUsers = (int) $this->get_user_count();
+		$counts = $this->get_detailed_user_counts_if_enabled($knownTotalUsers);
+		$twoFactorEnabled = Controller_Settings::shared()->is_2fa_enabled();
+		$passkeysEnabled = Controller_Settings::shared()->are_passkeys_enabled();
+		$this->userSummaryDataCache = array(
+			'counts' => $counts,
+			'known_total_users' => $knownTotalUsers,
+			'2fa_enabled' => $twoFactorEnabled,
+			'passkeys_enabled' => $passkeysEnabled,
+			'active_2fa_users' => $twoFactorEnabled ? (is_array($counts) ? (int) $counts['active_total_users'] : $this->active_count()) : 0,
+			'active_passkey_users' => $passkeysEnabled ? (is_array($counts) ? (int) $counts['passkey_active_total_users'] : $this->passkey_active_count()) : 0,
+		);
+		return $this->userSummaryDataCache;
 	}
 
 	public function has_large_user_base() {
@@ -1590,10 +1687,20 @@ SQL;
 		return isset($_GET['wfls-show-user-counts']);
 	}
 
-	public function get_detailed_user_counts_if_enabled() {
+	/**
+	 * Returns detailed user counts when the site-size safeguard permits the aggregation query.
+	 *
+	 * @param int|null $totalUserCount Previously retrieved total user count, when available.
+	 * @return array|null|false Detailed counts, null when deferred, or false after a failed query.
+	 */
+	public function get_detailed_user_counts_if_enabled($totalUserCount = null) {
 		$force = $this->should_force_user_counts();
-		if ($this->has_large_user_base() && !$force)
+		if ($totalUserCount === null) {
+			$totalUserCount = $this->get_user_count();
+		}
+		if ($totalUserCount >= self::LARGE_USER_BASE_THRESHOLD && !$force) {
 			return null;
+		}
 		return $this->detailed_user_counts($force);
 	}
 

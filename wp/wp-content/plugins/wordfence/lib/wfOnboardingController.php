@@ -11,7 +11,6 @@ class wfOnboardingController {
 	const TOUR_BLOCKING = 'blocking';
 	const TOUR_LIVE_TRAFFIC = 'livetraffic';
 	const TOUR_AUDIT_LOG = 'auditlog';
-	const TOUR_LOGIN_SECURITY = 'loginsecurity';
 	
 	/**
 	 * Sets the appropriate initial settings for an existing install so it's not forced through onboarding.
@@ -52,8 +51,7 @@ class wfOnboardingController {
 							self::shouldShowNewTour(self::TOUR_SCAN) || self::shouldShowUpgradeTour(self::TOUR_SCAN) ||
 							self::shouldShowNewTour(self::TOUR_BLOCKING) || self::shouldShowUpgradeTour(self::TOUR_BLOCKING) ||
 							self::shouldShowNewTour(self::TOUR_LIVE_TRAFFIC) || self::shouldShowUpgradeTour(self::TOUR_LIVE_TRAFFIC) ||
-							self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG) ||
-							self::shouldShowNewTour(self::TOUR_LOGIN_SECURITY) || self::shouldShowUpgradeTour(self::TOUR_LOGIN_SECURITY));
+							self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG));
 		if (!self::shouldShowAnyAttempt() && !$willShowAnyTour) {
 			return;
 		}
@@ -73,8 +71,7 @@ class wfOnboardingController {
 			self::shouldShowNewTour(self::TOUR_SCAN) || self::shouldShowUpgradeTour(self::TOUR_SCAN) ||
 			self::shouldShowNewTour(self::TOUR_BLOCKING) || self::shouldShowUpgradeTour(self::TOUR_BLOCKING) ||
 			self::shouldShowNewTour(self::TOUR_LIVE_TRAFFIC) || self::shouldShowUpgradeTour(self::TOUR_LIVE_TRAFFIC) ||
-			self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG) ||
-			self::shouldShowNewTour(self::TOUR_LOGIN_SECURITY) || self::shouldShowUpgradeTour(self::TOUR_LOGIN_SECURITY));
+			self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG));
 		
 		$page = wfUtils::array_get($_GET, 'page', '');
 		if (wfUtils::isAdmin() && 
@@ -106,8 +103,7 @@ class wfOnboardingController {
 							self::shouldShowNewTour(self::TOUR_SCAN) || self::shouldShowUpgradeTour(self::TOUR_SCAN) ||
 							self::shouldShowNewTour(self::TOUR_BLOCKING) || self::shouldShowUpgradeTour(self::TOUR_BLOCKING) ||
 							self::shouldShowNewTour(self::TOUR_LIVE_TRAFFIC) || self::shouldShowUpgradeTour(self::TOUR_LIVE_TRAFFIC) ||
-							self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG) ||
-							self::shouldShowNewTour(self::TOUR_LOGIN_SECURITY) || self::shouldShowUpgradeTour(self::TOUR_LOGIN_SECURITY));
+							self::shouldShowNewTour(self::TOUR_AUDIT_LOG) || self::shouldShowUpgradeTour(self::TOUR_AUDIT_LOG));
 		
 		$screen = get_current_screen();
 		if ($screen->base == 'plugins' && self::shouldShowAttempt1()) {

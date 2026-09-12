@@ -1365,7 +1365,6 @@ END
 		add_filter('wordfence_ls_mask_login_errors', function($maskLoginErrors) {
 			return (bool) wfConfig::get('loginSec_maskLoginErrors');
 		});
-		add_action('wfls_page_footer', 'wordfence::_outputLoginSecurityTour');
 		add_action('wfls_settings_set', 'wordfence::queueCentralConfigurationSync', 10, 2);
 
 		if(is_admin()){
@@ -1489,12 +1488,6 @@ END
 			$links = array_merge(array('aWordfencePluginCallout' => '<a href="https://www.wordfence.com/zz12/wordfence-signup/" target="_blank" rel="noopener noreferrer"><strong style="color: #11967A; display: inline;">' . esc_html__('Upgrade To Premium', 'wordfence') . '</strong><span class="screen-reader-text"> (opens in new tab)</span></a>'), $links);
 		} 
 		return $links;
-	}
-	
-	public static function _outputLoginSecurityTour() {
-		if (WORDFENCE_LS_FROM_CORE) {
-			echo wfView::create('tours/login-security', array())->render();
-		}
 	}
 	
 	public static function fixWPMailFromAddress($from_email) {
@@ -4103,7 +4096,7 @@ END
 		}
 
 		
-		$keys = array(wfOnboardingController::TOUR_DASHBOARD, wfOnboardingController::TOUR_FIREWALL, wfOnboardingController::TOUR_SCAN, wfOnboardingController::TOUR_BLOCKING, wfOnboardingController::TOUR_LIVE_TRAFFIC, wfOnboardingController::TOUR_LOGIN_SECURITY, wfOnboardingController::TOUR_AUDIT_LOG);
+		$keys = array(wfOnboardingController::TOUR_DASHBOARD, wfOnboardingController::TOUR_FIREWALL, wfOnboardingController::TOUR_SCAN, wfOnboardingController::TOUR_BLOCKING, wfOnboardingController::TOUR_LIVE_TRAFFIC, wfOnboardingController::TOUR_AUDIT_LOG);
 		if (in_array($page, $keys)) {
 			if (wfOnboardingController::shouldShowNewTour($page)) {
 				wfConfig::set('needsNewTour_' . $page, 0);
