@@ -6,17 +6,27 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
 
 /**
  * @var array $sections The content tabs, each element is an array of the syntax array('tab' => Model_Tab instance, 'title' => Title instance, 'content' => HTML content). Required.
+ * @var bool $featured Whether the page uses the featured tab presentation. Optional.
  */
+$tabs = array_map(function($t) { return $t['tab']; }, $sections);
+$featured = isset($featured) ? (bool) $featured : false;
 ?>
 <?php do_action('wfls_activation_page_header'); ?>
-<div class="wrap wordfence-ls">
+<div class="wrap wordfence-ls<?php if ($featured): ?> wfls-featured-page-tabs<?php endif; ?>">
 	<div class="wfls-container-fluid">
 		<?php
-		$tabs = array_map(function($t) { return $t['tab']; }, $sections);
 		echo \WordfenceLS\Model_View::create('page/tabbar', array(
 			'tabs' => $tabs,
+			'featured' => $featured,
 		))->render();
 		?>
+		<?php if ($featured): ?>
+	</div> <!-- end tab container -->
+</div> <!-- end tab wrapper -->
+<div class="wfls-featured-page-shell">
+	<div class="wrap wordfence-ls wfls-featured-page-content">
+		<div class="wfls-container-fluid">
+		<?php endif; ?>
 		<div class="wfls-row">
 			<div class="wfls-col-xs-12">
 				<?php foreach ($sections as $s): ?>
@@ -33,6 +43,7 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
 		</div> <!-- end row -->
 	</div> <!-- end container -->
 </div>
+<?php if ($featured): ?></div> <!-- end featured page shell --><?php endif; ?>
 <div class="wordfence-vue-wrapper" data-base-component="WFLSCommonModals"></div>
 <?php
 /**

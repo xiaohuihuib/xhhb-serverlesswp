@@ -13,13 +13,14 @@ if ($ownUser->ID == $user->ID) {
 <div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 	<div class="wfls-block-header wfls-block-header-border-bottom">
 		<div class="wfls-block-header-content">
-			<div class="wfls-block-title">
+			<div class="wfls-block-title wfls-two-factor-card-title">
+				<span class="wfls-two-factor-card-title-icon" aria-hidden="true"><i class="<?php echo esc_attr(\WordfenceLS\Utility_Style::font_awesome_classes('check-circle')); ?>"></i></span>
 				<strong><?php esc_html_e('Wordfence 2FA Active', 'wordfence'); ?></strong>
 			</div>
 		</div>
 	</div>
 	<div class="wfls-block-content wfls-padding-add-bottom">
-		<p><?php if ($ownAccount) { esc_html_e('Wordfence two-factor authentication is currently active on your account. You may deactivate it by clicking the button below.', 'wordfence'); } else { echo wp_kses(sprintf(/* translators: Username */ __('Wordfence two-factor authentication is currently active on the account <strong>%s</strong>. You may deactivate it by clicking the button below.', 'wordfence'), esc_html($user->user_login)), array('strong'=>array())); } ?></p>
+		<p><?php if ($ownAccount) { esc_html_e('Wordfence two-factor authentication is currently active on your account. You may deactivate it by clicking the button below.', 'wordfence'); } else { echo wp_kses(sprintf(/* translators: Username */ __('Wordfence two-factor authentication is currently active for user <strong>%s</strong>. You may deactivate it by clicking the button below.', 'wordfence'), esc_html($user->user_login)), array('strong'=>array())); } ?></p>
 		<p class="wfls-center wfls-add-top"><a href="#" class="wfls-btn wfls-btn-default" id="wfls-deactivate" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Deactivate', 'wordfence'); ?></a></p>
 	</div>
 </div>

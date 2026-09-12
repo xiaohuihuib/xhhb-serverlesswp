@@ -11,7 +11,8 @@ class Controller_DB {
 	const TABLE_ROLE_COUNTS = 'wfls_role_counts';
 	const TABLE_ROLE_COUNTS_TEMPORARY = 'wfls_role_counts_temporary';
 
-	const SCHEMA_VERSION = 3;
+	const SCHEMA_VERSION = 4;
+	const PASSKEY_SCHEMA_VERSION = 3; //Schema version that introduced passkey support, not a separate schema version.
 	
 	/**
 	 * Returns the singleton Controller_DB.
@@ -63,8 +64,13 @@ class Controller_DB {
 		throw new \OutOfBoundsException('Unknown key: ' . $key);
 	}
 	
+	/**
+	 * Installs or upgrades the database schema.
+	 *
+	 * @return int Schema version found before migrations were applied, or zero for a new installation.
+	 */
 	public function install() {
-		$this->migrate_to_schema_version(self::SCHEMA_VERSION);
+		return $this->migrate_to_schema_version(self::SCHEMA_VERSION);
 	}
 	
 	public function uninstall() {
@@ -189,7 +195,7 @@ SQL;
 			if ($targetVersion > 0) {
 				$this->normalize_schema_data();
 			}
-			return;
+			return $currentVersion;
 		}
 
 		for ($nextVersion = $currentVersion + 1; $nextVersion <= $targetVersion; $nextVersion++) {
@@ -198,6 +204,7 @@ SQL;
 		}
 
 		$this->normalize_schema_data();
+		return $currentVersion;
 	}
 
 	private function get_schema_version() {
@@ -228,6 +235,36 @@ SQL;
 		$this->query('DROP TABLE IF EXISTS `' . self::network_table($table) . '`');
 		if (!$this->create_table($table, $this->get_role_counts_table_definition_options())) {
 			throw new RuntimeException("Failed to recreate table schema for {$table}");
+		}
+	}
+
+	/**
+	 * Initializes the global authentication feature switches from the existing role configuration.
+	 *
+	 * @return void
+	 */
+	private function migrate_schema_to_version_4() {
+		$roles = function_exists('wp_roles') ? wp_roles() : (class_exists('WP_Roles') ? new \WP_Roles() : null);
+		$enable2FA = is_multisite();
+		$enablePasskeys = is_multisite();
+		$roleObjects = is_object($roles) && isset($roles->role_objects) && is_array($roles->role_objects) ? $roles->role_objects : array();
+		foreach ($roleObjects as $name => $role) {
+			if ($role->has_cap(Controller_Permissions::CAP_ACTIVATE_2FA_SELF) || Controller_Settings::shared()->get_required_2fa_role_activation_time($name) !== false) {
+				$enable2FA = true;
+			}
+			if (!is_multisite() && ($role->has_cap(Controller_Permissions::CAP_MANAGE_PASSKEY_SELF) || Controller_Settings::shared()->get_required_passkey_role_activation_time($name) !== false)) {
+				$enablePasskeys = true;
+			}
+		}
+		$changes = array();
+		if (Controller_Settings::shared()->get(Controller_Settings::OPTION_ENABLE_2FA, null) === null) {
+			$changes[Controller_Settings::OPTION_ENABLE_2FA] = $enable2FA;
+		}
+		if (Controller_Settings::shared()->get(Controller_Settings::OPTION_ENABLE_PASSKEYS, null) === null) {
+			$changes[Controller_Settings::OPTION_ENABLE_PASSKEYS] = $enablePasskeys;
+		}
+		if (!empty($changes)) {
+			Controller_Settings::shared()->set_multiple($changes, true);
 		}
 	}
 

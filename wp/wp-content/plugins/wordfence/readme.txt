@@ -4,7 +4,7 @@ Tags: security, malware, 2fa, firewall, scanner
 Requires at least: 4.7
 Requires PHP: 7.0
 Tested up to: 7.1
-Stable tag: 9.0.0
+Stable tag: 9.0.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -207,6 +207,14 @@ Secure your website with Wordfence.
 9. Logging in is easy with Wordfence 2FA.
 
 == Changelog ==
+
+= 9.0.1 - September 8, 2026 =
+* Improvement: UX enhancements for passkey authentication and general login security
+* Improvement: GeoIP database updated
+* Fix: Improved error handling in WAF request handlers and XML-RPC parser
+* Fix: Fixed an issue with translations not showing on the Login Security Settings tab
+* Fix: Addressed several potential PHP 8.5+ deprecation notices
+* Fix: Reworked MD5 hash use in MySQL to avoid deprecation in 9.7+
 
 = 9.0.0 - August 10, 2026 =
 * Improvement: Added support for passkey authentication
@@ -582,95 +590,5 @@ Secure your website with Wordfence.
 = 7.5.6 - October 18, 2021 =
 * Fix: Prevented login errors with WooCommerce integration when manual username entry is enabled on the WooCommerce registration form
 * Fix: Corrected theme incompatibilities with WooCommerce integration
-
-= 7.5.5 - August 16, 2021 =
-* Improvement: Enhanced accessibility
-* Improvement: Replaced regex in scan log with signature ID
-* Improvement: Updated Knockout JS dependency to version 3.5.1
-* Improvement: Removed PHP 8 compatibility notice
-* Improvement: Added NTP status for Login Security to Diagnostics
-* Improvement: Updated plugin headers for compatibility with WordPress 5.8
-* Improvement: Updated Nginx documentation links to HTTPS
-* Improvement: Updated IP address geolocation database
-* Improvement: Expanded WAF SQL syntax support
-* Improvement: Added optional constants to configure WAF database connection
-* Improvement: Added support for matching punycode domain names
-* Improvement: Updated Wordfence install count
-* Improvement: Deprecated support for WordPress versions older than 4.4.0
-* Improvement: Added warning messages when blocking U.S.
-* Improvement: Added MYSQLI_CLIENT_SSL support to WAF database connection
-* Improvement: Added 2FA and reCAPTCHA support for WooCommerce login and registration forms
-* Improvement: Added option to require 2FA for any role
-* Improvement: Added logic to automatically disable NTP after repeated failures and option to manually disable NTP
-* Improvement: Updated reCAPTCHA setup note
-* Fix: Prevented issue where country blocking changes are not saved
-* Fix: Corrected string placeholder
-* Fix: Added missing text domain to translation calls
-* Fix: Corrected warning about sprintf arguments on Central setup page
-* Fix: Prevented lost password functionality from revealing valid logins
-
-= 7.5.4 - June 7, 2021 =
-
-* Fix: Resolve conflict with woocommerce-gateway-amazon-payments-advanced plugin
-
-= 7.5.3 - May 10, 2021 =
-
-* Improvement: Expanded WAF capabilities including better JSON and user permission handling
-* Improvement: Switched to relative paths in WAF auto_prepend file to increase portability
-* Improvement: Eliminated unnecessary calls to Wordfence servers
-* Fix: Prevented errors on PHP 8.0 when disk_free_space and/or disk_total_space are included in disabled_functions
-* Fix: Fixed PHP notices caused by unexpected plugin version data
-* Fix: Gracefully handle unexpected responses from Wordfence servers
-* Fix: Time field now displays correctly on "See Recent Traffic" overlay
-* Fix: Corrected typo on Diagnostics page
-* Fix: Corrected IP counts on activity report
-* Fix: Added missing line break in scan result emails
-* Fix: Sending test activity report now provides success/failure response
-* Fix: Reduced SQLi false positives caused by comma-separated strings
-* Fix: Fixed JS error when resolving last scan result
-
-= 7.5.2 - March 24, 2021 =
-
-* Fix: Fixed fatal error on single-sites running WordPress <4.9.
-
-= 7.5.1 - March 24, 2021 =
-
-* Fix: Fixed fatal error when viewing the Login Security settings page from an allowlisted IP.
-
-= 7.5.0 - March 24, 2021 =
-
-* Improvement: Translation-readiness: All user-facing strings are now run through WordPress's i18n functions.
-* Improvement: Remove legacy admin functions no longer used within the UI.
-* Improvement: Local GeoIP database update.
-* Improvement: Remove Lynwood IP range from allowlist, and add new AWS IP range.
-* Fix: Fixed bug with unlocking a locked out IP without correctly resetting its failure counters.
-* Fix: Sites using deleted premium licenses correctly revert to free license behavior.
-* Fix: When enabled, cookies are now set for the correct roles on previously used devices.
-* Fix: WAF cron jobs are now skipped when running on the CLI.
-* Fix: PHP 8.0 compatibility - prevent syntax error when linting files.
-* Fix: Fixed issue where PHP 8 notice sometimes cannot be dismissed.
-
-= 7.4.14 - December 3, 2020 =
-
-* Improvement: Added option to disable application passwords.
-* Improvement: Updated site cleaning callout with 1-year guarantee.
-* Improvement: Upgraded sodium_compat library to 1.13.0.
-* Improvement: Replaced the terms whitelist and blacklist with allowlist and blocklist.
-* Improvement: Made a number of WordPress 5.6 and jQuery 3.x compatibility improvements.
-* Improvement: Made a number of PHP8 compatilibility improvements.
-* Improvement: Added dismissable notice informing users of possible PHP8 compatibility issues.
-
-= 7.4.12 - October 21, 2020 =
-
-* Improvement: Initial integration of i18n in Wordfence.
-* Improvement: Prevent Wordfence from loading under <PHP 5.3.
-* Improvement: Updated GeoIP database.
-* Improvement: Prevented wildcard from running/saving for scan's excluded files pattern.
-* Improvement: Included Wordfence Login Security tables in diagnostics missing table list.
-* Fix: Removed new scan issues when WordPress update occurs mid-scan.
-* Fix: Specified category when saving `whitelistedServiceIPs` to WAF storage engine.
-* Fix: Removed localhost IP for auto-update email alerts.
-* Fix: Fixed broken message in Live Traffic with MySQLi storage engine for blocklisted hits.
-* Fix: Removed optional parameter values for PHP 8 compatibility.
 
 You can find a [complete changelog](https://www.wordfence.com/help/advanced/changelog/) on our documentation site.

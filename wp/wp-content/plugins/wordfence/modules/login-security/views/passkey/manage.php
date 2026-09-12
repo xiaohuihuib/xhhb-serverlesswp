@@ -12,8 +12,11 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
  */
 
 $stacked = isset($stacked) ? $stacked : false;
+$ownUser = wp_get_current_user();
+$ownAccount = $ownUser->ID == $user->ID;
 $canRegisterPasskeys = isset($canRegisterPasskeys) ? $canRegisterPasskeys : true;
 $canRegisterPasskeys = $canRegisterPasskeys && \WordfenceLS\Controller_Passkey::shared()->has_passkey_capacity($passkeys);
+$showAddPasskeyPanel = $canRegisterPasskeys || !$ownAccount;
 $passkeysEnabledForUser = isset($passkeysEnabledForUser) ? $passkeysEnabledForUser : true;
 $settingsURL = isset($settingsURL) ? $settingsURL : (is_multisite() ? network_admin_url('admin.php?page=WFLS#top#settings') : admin_url('admin.php?page=WFLS#top#settings'));
 $showSettingsButton = isset($showSettingsButton) ? $showSettingsButton : true;
@@ -22,20 +25,28 @@ $columnClasses = 'wfls-flex-row wfls-flex-item-xs-100 ' . ($stacked ? '' : 'wfls
 $hasPasskey = \WordfenceLS\Controller_Users::shared()->has_passkey_active($user);
 $requiresPasskey = \WordfenceLS\Controller_Users::shared()->requires_passkey($user, $inPasskeyGracePeriod, $passkeyRequiredAt);
 $passkeyLockedOut = $requiresPasskey && !$hasPasskey;
-$showPasskeyGracePeriod = $passkeyLockedOut || $inPasskeyGracePeriod;
-$ownUser = wp_get_current_user();
-$ownAccount = $ownUser->ID == $user->ID;
+$passkeyListTitle = $ownAccount ? __('Your Passkeys', 'wordfence') : __('Registered Passkeys', 'wordfence');
 $uiStyleContext = \WordfenceLS\Controller_WordfenceLS::shared()->ui_style_context();
-$addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYLE_CONTEXT_CORE
-	? 'wf-fa wf-fa-plus'
-	: 'wfls-fa wfls-fa-plus';
+$passkeyController = \WordfenceLS\Controller_Passkey::shared();
+$canChangeUsernamePasswordAuth = $passkeyController->can_change_username_password_auth($user);
+$showUsernamePasswordAuthOptions = !empty($passkeys) || !$canChangeUsernamePasswordAuth;
+$passwordAuthWillBeRestored = count($passkeys) === 1 && $canChangeUsernamePasswordAuth && !$passkeyController->is_username_password_auth_enabled($user);
+$removePromptMessage = __('Are you sure you want to remove this passkey? Deleting a passkey here does not necessarily remove it from your device\'s password manager.', 'wordfence');
+if ($passwordAuthWillBeRestored) {
+	$removePromptMessage = $ownAccount
+		? __('This is your only passkey. If you remove it, you’ll return to signing in with your username and password. Removing it here may not remove it from your device’s password manager.', 'wordfence')
+		: __('This is the user\'s only passkey. If you remove it, the user will return to signing in with a username and password. Removing it here will not remove it from the user\'s password manager.', 'wordfence');
+}
+$addIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('plus', $uiStyleContext);
 ?>
 <div id="wfls-passkey-management-embedded" data-wfls-ui-style="<?php echo esc_attr($uiStyleContext); ?>"<?php if ($stacked): ?> class="stacked"<?php endif ?>>
+	<p class="wfls-passkey-embedded-introduction"><?php esc_html_e('Passkeys let you sign in securely using your fingerprint, face, device PIN, or password.', 'wordfence'); ?></p>
 	<?php if (!$passkeysEnabledForUser): ?>
 		<?php
+		$globallyEnabled = \WordfenceLS\Controller_Settings::shared()->are_passkeys_enabled();
 		echo \WordfenceLS\Model_View::create('page/feature-disabled', array(
-			'title' => $ownAccount ? __('Passkeys are disabled', 'wordfence') : __('Passkeys are disabled for this user.', 'wordfence'),
-			'message' => $ownAccount ? __('Your role does not have permission to use passkeys.', 'wordfence') : ($showSettingsButton ? __('Enable passkeys on the settings page for this user\'s role to manage the user\'s passkeys.', 'wordfence') : __('Passkeys are not enabled for this user\'s role.', 'wordfence')),
+			'title' => !$globallyEnabled ? __('Passkeys are disabled.', 'wordfence') : ($ownAccount ? __('Passkeys are disabled.', 'wordfence') : __('Passkeys are disabled for this user.', 'wordfence')),
+			'message' => !$globallyEnabled ? __('Signing in using a passkey is currently disabled for this site. Existing passkeys and role settings are preserved.', 'wordfence') : ($ownAccount ? __('Your role does not have permission to use passkeys.', 'wordfence') : ($showSettingsButton ? __('Enable passkeys on the settings page for this user\'s role to manage the user\'s passkeys.', 'wordfence') : __('Passkeys are not enabled for this user\'s role.', 'wordfence'))),
 			'settingsURL' => $settingsURL,
 			'showSettingsButton' => $showSettingsButton,
 		))->render();
@@ -44,17 +55,17 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 		<?php return; ?>
 	<?php endif; ?>
 	<div class="<?php echo $containerClasses ?>">
-		<div class="<?php echo $columnClasses ?> wfls-passkey-management-column<?php if (!$stacked): ?> <?php echo $canRegisterPasskeys ? 'wfls-flex-item-sm-50' : 'wfls-flex-item-full-width'; ?><?php endif ?>">
+		<div class="<?php echo $columnClasses ?> wfls-passkey-management-column wfls-passkey-registered-column<?php if (!$stacked): ?> <?php echo $showAddPasskeyPanel ? 'wfls-flex-item-sm-50' : 'wfls-flex-item-full-width'; ?><?php endif ?>">
 			<div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 				<div class="wfls-block-header wfls-block-header-border-bottom">
 					<div class="wfls-block-header-content">
 						<div class="wfls-block-title">
-							<strong><?php esc_html_e('Registered Passkeys', 'wordfence'); ?></strong>
+							<strong><?php echo esc_html($passkeyListTitle); ?></strong>
 						</div>
 					</div>
 					</div>
 					<div class="wfls-block-content wfls-padding-add-bottom">
-						<p id="wfls-passkey-empty"<?php if (!empty($passkeys)): ?> style="display: none;"<?php endif; ?>><?php esc_html_e('No passkeys are registered for this account yet.', 'wordfence'); ?></p>
+						<p id="wfls-passkey-empty"<?php if (!empty($passkeys)): ?> style="display: none;"<?php endif; ?>><?php esc_html_e('No passkeys are registered for this user yet.', 'wordfence'); ?></p>
 						<div id="wfls-passkey-list">
 							<?php foreach ($passkeys as $passkey): ?>
 								<?php echo \WordfenceLS\Model_View::create('passkey/item', array('passkey' => $passkey, 'uiStyleContext' => $uiStyleContext))->render(); ?>
@@ -64,18 +75,18 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 				</div>
 			</div>
 		<?php if ($canRegisterPasskeys): ?>
-			<div class="<?php echo $columnClasses ?> wfls-passkey-management-column<?php if (!$stacked): ?> wfls-flex-item-sm-50<?php endif ?>">
+			<div class="<?php echo $columnClasses ?> wfls-passkey-management-column wfls-passkey-add-column<?php if (!$stacked): ?> wfls-flex-item-sm-50<?php endif ?>">
 				<div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 					<div class="wfls-block-header wfls-block-header-border-bottom">
 						<div class="wfls-block-header-content">
 							<div class="wfls-block-title">
-								<strong><?php esc_html_e('Add Passkey', 'wordfence'); ?></strong>
+								<strong><?php esc_html_e('Add a Passkey', 'wordfence'); ?></strong>
 							</div>
 						</div>
 					</div>
-					<div class="wfls-block-content wfls-padding-add-bottom">
-						<p><?php esc_html_e('Use the current browser or device to create a new passkey for this account. This passkey can work across multiple devices, so pick a nickname that will help you identify it later (e.g., the name of your password manager or account provider).', 'wordfence'); ?></p>
-						<div class="wfls-passkey-add-row wfls-add-top">
+					<div class="wfls-block-content">
+						<p><?php esc_html_e('Create a passkey and give it a name so you can identify it later. You may need a separate passkey for each device unless your passkeys sync through a password manager.', 'wordfence'); ?></p>
+						<div class="wfls-passkey-add-row wfls-add-top wfls-add-bottom">
 							<input type="text"
 								   id="wfls-passkey-label"
 								   class="input wfls-input-text wfls-passkey-add-input"
@@ -93,43 +104,55 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 							</a>
 						</div>
 						<?php
-						echo \WordfenceLS\Model_View::create('passkey/initial-allowed-hostnames', array(
-							'initialAllowedHostnames' => isset($initialAllowedHostnames) ? $initialAllowedHostnames : array(),
-						))->render();
-						?>
+							echo \WordfenceLS\Model_View::create('passkey/initial-allowed-hostnames', array(
+								'initialAllowedHostnames' => isset($initialAllowedHostnames) ? $initialAllowedHostnames : array(),
+							))->render();
+							?>
+						</div>
+						<?php if ($inPasskeyGracePeriod || $passkeyLockedOut): ?>
+							<?php echo \WordfenceLS\Model_View::create('passkey/grace-period', array(
+								'user' => $user,
+								'gracePeriod' => $inPasskeyGracePeriod,
+								'lockedOut' => $passkeyLockedOut,
+								'requiredAt' => $passkeyRequiredAt,
+								'uiStyleContext' => $uiStyleContext,
+							))->render(); ?>
+						<?php endif; ?>
 					</div>
 				</div>
-			</div>
-		<?php endif; ?>
-	</div>
-	<div class="<?php echo $containerClasses ?>">
-		<div class="<?php echo $columnClasses ?><?php if (!$stacked && $showPasskeyGracePeriod): ?> wfls-col-sm-half-padding-right wfls-flex-item-sm-50<?php else: ?> wfls-flex-item-full-width<?php endif; ?>">
-			<?php
-			echo \WordfenceLS\Model_View::create('passkey/options', array(
-				'user' => $user,
-			))->render();
-			?>
-		</div>
-		<?php if ($showPasskeyGracePeriod): ?>
-			<div class="<?php echo $columnClasses ?><?php if (!$stacked): ?> wfls-col-sm-half-padding-left wfls-flex-item-sm-50<?php endif; ?>">
-				<?php
-				echo \WordfenceLS\Model_View::create('passkey/grace-period', array(
+		<?php elseif (!$ownAccount): ?>
+			<div class="<?php echo $columnClasses ?> wfls-passkey-management-column wfls-passkey-add-column<?php if (!$stacked): ?> wfls-flex-item-sm-50<?php endif ?>">
+				<?php echo \WordfenceLS\Model_View::create('passkey/register-disabled', array(
+					'uiStyleContext' => $uiStyleContext,
 					'user' => $user,
 					'gracePeriod' => $inPasskeyGracePeriod,
 					'lockedOut' => $passkeyLockedOut,
 					'requiredAt' => $passkeyRequiredAt,
-				))->render();
-				?>
+				))->render(); ?>
 			</div>
 		<?php endif; ?>
 	</div>
 	<?php echo \WordfenceLS\Model_View::create('passkey/information')->render(); ?>
+	<?php if ($showUsernamePasswordAuthOptions): ?>
+	<div class="<?php echo $containerClasses ?>">
+		<div class="<?php echo $columnClasses ?> wfls-flex-item-full-width">
+			<?php
+			echo \WordfenceLS\Model_View::create('passkey/options', array(
+				'user' => $user,
+				'canChangeUsernamePasswordAuth' => $canChangeUsernamePasswordAuth,
+				'canManageSettings' => $showSettingsButton,
+				'settingsURL' => $settingsURL,
+			))->render();
+			?>
+		</div>
+	</div>
+	<?php endif; ?>
 	<div style="display: none;">
 		<?php
 		echo \WordfenceLS\Model_View::create('common/modal-prompt', array(
 			'id' => 'wfls-template-passkey-remove-prompt',
 			'title' => __('Remove Passkey', 'wordfence'),
-			'message' => __('Are you sure you want to remove this passkey?', 'wordfence'),
+			'message' => $removePromptMessage,
 			'primaryButton' => array('class' => 'wfls-passkey-remove-prompt-cancel', 'label' => __('Cancel', 'wordfence'), 'link' => '#'),
 			'secondaryButtons' => array(array('class' => 'wfls-passkey-remove-prompt-confirm', 'label' => __('Remove', 'wordfence'), 'link' => '#')),
 		))->render();
@@ -143,7 +166,8 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 			var labelField = $('#wfls-passkey-label');
 			var list = $('#wfls-passkey-list');
 			var empty = $('#wfls-passkey-empty');
-			var uiStyleContext = $('#wfls-passkey-management-embedded').attr('data-wfls-ui-style') || 'wfls';
+			var container = list.closest('#wfls-passkey-management-embedded');
+			var uiStyleContext = container.attr('data-wfls-ui-style') || 'wfls';
 			var busy = false;
 
 			function canSubmit() {
@@ -162,7 +186,8 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 			}
 
 			function updateEmptyState() {
-				empty.toggle(list.find('.wfls-passkey-item').length === 0);
+				var isEmpty = list.find('.wfls-passkey-item').length === 0;
+				empty.toggle(isEmpty);
 			}
 
 			<?php echo \WordfenceLS\Model_View::create('passkey/registration-error-handler')->render(); ?>
@@ -219,6 +244,11 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 											return;
 										}
 
+										var hadPasskeys = list.find('.wfls-passkey-item').length > 0;
+										if (!hadPasskeys) {
+											window.location.reload();
+											return;
+										}
 										list.append(finishResponse.item_html);
 										labelField.val('');
 										updateButtonState();
@@ -274,6 +304,10 @@ $addIconClass = $uiStyleContext === \WordfenceLS\Controller_WordfenceLS::UI_STYL
 
 								WFLS.closeStandaloneModal();
 								item.remove();
+								if (list.find('.wfls-passkey-item').length === 0) {
+									window.location.reload();
+									return;
+								}
 								updateEmptyState();
 							},
 							function() {

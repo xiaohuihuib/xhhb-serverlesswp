@@ -9,6 +9,12 @@ use WordfenceLS\Utility_Number;
 class Controller_Settings {
 	//Configurable
 	const OPTION_XMLRPC_ENABLED = 'xmlrpc-enabled';
+	const OPTION_ENABLE_2FA = 'enable-2fa';
+	const OPTION_ENABLE_PASSKEYS = 'enable-passkeys';
+	const DEFAULT_ENABLE_2FA = false;
+	const DEFAULT_ENABLE_PASSKEYS = false;
+	const LEGACY_DEFAULT_ENABLE_2FA = true;
+	const LEGACY_DEFAULT_ENABLE_PASSKEYS = true;
 	const OPTION_2FA_WHITELISTED = 'whitelisted';
 	const OPTION_IP_SOURCE = 'ip-source';
 	const OPTION_IP_TRUSTED_PROXIES = 'ip-trusted-proxies';
@@ -99,6 +105,8 @@ class Controller_Settings {
 	 */
 	protected function _defaults() {
 		return array(
+			self::OPTION_ENABLE_2FA => self::DEFAULT_ENABLE_2FA,
+			self::OPTION_ENABLE_PASSKEYS => self::DEFAULT_ENABLE_PASSKEYS,
 			self::OPTION_XMLRPC_ENABLED => true,
 			self::OPTION_2FA_WHITELISTED => '',
 			self::OPTION_IP_SOURCE => Model_Request::IP_SOURCE_AUTOMATIC,
@@ -197,7 +205,11 @@ class Controller_Settings {
 	}
 	
 	public function all() {
-		$result = $this->_settingsStorage->get_multiple($this->_defaults());
+		$defaults = $this->_defaults();
+		// Fresh installs persist disabled values; missing values are from legacy installs and retain the enabled behavior.
+		$defaults[self::OPTION_ENABLE_2FA] = self::LEGACY_DEFAULT_ENABLE_2FA;
+		$defaults[self::OPTION_ENABLE_PASSKEYS] = self::LEGACY_DEFAULT_ENABLE_PASSKEYS;
+		$result = $this->_settingsStorage->get_multiple($defaults);
 		if ($this->passkey_allowed_hostnames_missing()) {
 			$result[self::OPTION_PASSKEY_ALLOWED_HOSTNAMES] = implode("\n", $this->default_passkey_allowed_hostnames(Utility_URL::get_default_public_suffix_list()));
 		}
@@ -221,6 +233,8 @@ class Controller_Settings {
 		switch ($key) {
 			//Boolean
 			case self::OPTION_XMLRPC_ENABLED:
+			case self::OPTION_ENABLE_2FA:
+			case self::OPTION_ENABLE_PASSKEYS:
 			case self::OPTION_REQUIRE_2FA_ADMIN:
 			case self::OPTION_REQUIRE_2FA_GRACE_PERIOD_ENABLED:
 			case self::OPTION_REMEMBER_DEVICE_ENABLED:
@@ -361,6 +375,8 @@ class Controller_Settings {
 		switch ($key) {
 			//Boolean
 			case self::OPTION_XMLRPC_ENABLED:
+			case self::OPTION_ENABLE_2FA:
+			case self::OPTION_ENABLE_PASSKEYS:
 			case self::OPTION_REQUIRE_2FA_ADMIN:
 			case self::OPTION_REQUIRE_2FA_GRACE_PERIOD_ENABLED:
 			case self::OPTION_REMEMBER_DEVICE_ENABLED:
@@ -432,6 +448,8 @@ class Controller_Settings {
 		switch ($key) {
 			//Boolean
 			case self::OPTION_XMLRPC_ENABLED:
+			case self::OPTION_ENABLE_2FA:
+			case self::OPTION_ENABLE_PASSKEYS:
 			case self::OPTION_REQUIRE_2FA_ADMIN:
 			case self::OPTION_REQUIRE_2FA_GRACE_PERIOD_ENABLED:
 			case self::OPTION_REMEMBER_DEVICE_ENABLED:
@@ -496,6 +514,26 @@ class Controller_Settings {
 
 	public function get_user_2fa_grace_period() {
 		return $this->get_int(self::OPTION_REQUIRE_2FA_USER_GRACE_PERIOD, self::DEFAULT_REQUIRE_2FA_USER_GRACE_PERIOD);
+	}
+
+	/**
+	 * Returns whether two-factor authentication is globally enabled.
+	 * Missing values are treated as enabled until the upgrade migration initializes them.
+	 *
+	 * @return bool
+	 */
+	public function is_2fa_enabled() {
+		return $this->get_bool(self::OPTION_ENABLE_2FA, self::LEGACY_DEFAULT_ENABLE_2FA);
+	}
+
+	/**
+	 * Returns whether passkeys are globally enabled.
+	 * Missing values are treated as enabled until the upgrade migration initializes them.
+	 *
+	 * @return bool
+	 */
+	public function are_passkeys_enabled() {
+		return $this->get_bool(self::OPTION_ENABLE_PASSKEYS, self::LEGACY_DEFAULT_ENABLE_PASSKEYS);
 	}
 	
 	private function get_required_passkey_role_key($role) {
@@ -925,7 +963,7 @@ class Controller_Settings {
 			}
 			
 			/**
-			 * Fires when 2FA availability/required on a role changes.
+			 * Fires when configured or effective 2FA availability/required on a role changes.
 			 *
 			 * @since 1.1.13
 			 *
@@ -965,7 +1003,7 @@ class Controller_Settings {
 			}
 			
 			/**
-			 * Fires when passkey availability/required on a role changes.
+			 * Fires when configured or effective passkey availability/required on a role changes.
 			 *
 			 * @since 2.0.0
 			 *
@@ -1181,6 +1219,39 @@ class Controller_Settings {
 		$remaining = array();
 		$syncLoginSecurityMenuVisibility = false;
 		$alwaysShowLoginSecurityMenu = array_key_exists(self::OPTION_ALWAYS_SHOW_LOGIN_SECURITY_MENU, $changes) ? Utility_Number::truthyToBool($changes[self::OPTION_ALWAYS_SHOW_LOGIN_SECURITY_MENU]) : null;
+		$featureDefinitions = array(
+			self::OPTION_ENABLE_2FA => array(
+				'role_prefix' => 'enabled-roles.',
+				'required_prefix' => self::OPTION_PREFIX_REQUIRED_2FA_ROLE . '.',
+				'capability' => Controller_Permissions::CAP_ACTIVATE_2FA_SELF,
+				'disabled_state' => self::STATE_2FA_DISABLED,
+				'optional_state' => self::STATE_2FA_OPTIONAL,
+				'required_state' => self::STATE_2FA_REQUIRED,
+				'action' => 'wordfence_ls_changed_2fa_required',
+				'multisite_roles' => true,
+			),
+			self::OPTION_ENABLE_PASSKEYS => array(
+				'role_prefix' => 'passkey-enabled-roles.',
+				'required_prefix' => self::OPTION_PREFIX_REQUIRED_PASSKEY_ROLE . '.',
+				'capability' => Controller_Permissions::CAP_MANAGE_PASSKEY_SELF,
+				'disabled_state' => self::STATE_PASSKEY_DISABLED,
+				'optional_state' => self::STATE_PASSKEY_OPTIONAL,
+				'required_state' => self::STATE_PASSKEY_REQUIRED,
+				'action' => 'wordfence_ls_changed_passkey_required',
+				'multisite_roles' => false,
+			),
+		);
+		$changedFeatures = array();
+		foreach ($featureDefinitions as $option => $definition) {
+			if (array_key_exists($option, $changes)) {
+				$enabledBefore = $option === self::OPTION_ENABLE_2FA ? $this->is_2fa_enabled() : $this->are_passkeys_enabled();
+				$enabledAfter = Utility_Number::truthyToBool($changes[$option]);
+				if ($enabledBefore !== $enabledAfter) {
+					$definition['enabled_after'] = $enabledAfter;
+					$changedFeatures[] = $definition;
+				}
+			}
+		}
 		foreach ($changes as $key => $value) {
 			if ($key === self::OPTION_ALWAYS_SHOW_LOGIN_SECURITY_MENU || preg_match('/^(?:enabled-roles|passkey-enabled-roles)\./', $key)) {
 				$syncLoginSecurityMenuVisibility = true;
@@ -1191,6 +1262,62 @@ class Controller_Settings {
 		}
 		if ($syncLoginSecurityMenuVisibility) {
 			Controller_Permissions::shared()->sync_login_security_menu_visibility(null, $alwaysShowLoginSecurityMenu);
+		}
+		if (!empty($changedFeatures)) {
+			$wpRoles = function_exists('wp_roles') ? wp_roles() : (class_exists('WP_Roles') ? new \WP_Roles() : null);
+			$roleObjects = is_object($wpRoles) && isset($wpRoles->role_objects) && is_array($wpRoles->role_objects) ? $wpRoles->role_objects : array();
+			foreach ($changedFeatures as $definition) {
+				$roles = array();
+				if (!is_multisite() || $definition['multisite_roles']) {
+					$roles = $roleObjects;
+				}
+				if (is_multisite()) {
+					$roles['super-admin'] = null;
+				}
+				foreach ($changes as $key => $value) {
+					if (strpos($key, $definition['role_prefix']) === 0) {
+						$role = substr($key, strlen($definition['role_prefix']));
+						if ($role !== '' && (!is_multisite() || $definition['multisite_roles'] || $role === 'super-admin')) {
+							$roles[$role] = isset($roleObjects[$role]) ? $roleObjects[$role] : null;
+						}
+					}
+				}
+
+				$requiredDefaults = array();
+				foreach (array_keys($roles) as $role) {
+					if (!array_key_exists($definition['role_prefix'] . $role, $changes)) {
+						$requiredDefaults[$definition['required_prefix'] . $role] = -1;
+					}
+				}
+				$requiredValues = $this->_settingsStorage->get_multiple($requiredDefaults);
+
+				foreach ($roles as $role => $roleObject) {
+					$pendingRoleKey = $definition['role_prefix'] . $role;
+					$roleWasChanged = array_key_exists($pendingRoleKey, $changes);
+					if ($roleWasChanged) {
+						$state = $changes[$pendingRoleKey];
+						if (!in_array($state, array($definition['optional_state'], $definition['required_state']), true)) {
+							$state = $definition['disabled_state'];
+						}
+					}
+					else {
+						$requiredKey = $definition['required_prefix'] . $role;
+						if (isset($requiredValues[$requiredKey]) && (int) $requiredValues[$requiredKey] >= 0) {
+							$state = $definition['required_state'];
+						}
+						else if ($role === 'super-admin' || (is_object($roleObject) && $roleObject->has_cap($definition['capability']))) {
+							$state = $definition['optional_state'];
+						}
+						else {
+							$state = $definition['disabled_state'];
+						}
+					}
+
+					if ($state !== $definition['disabled_state'] && (!$definition['enabled_after'] || !$roleWasChanged)) {
+						do_action($definition['action'], $role, $definition['enabled_after'] ? $state : $definition['disabled_state']);
+					}
+				}
+			}
 		}
 		return $remaining;
 	}

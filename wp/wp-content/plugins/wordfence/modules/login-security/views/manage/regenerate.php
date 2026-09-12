@@ -8,7 +8,8 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
 <div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 	<div class="wfls-block-header wfls-block-header-border-bottom">
 		<div class="wfls-block-header-content">
-			<div class="wfls-block-title">
+			<div class="wfls-block-title wfls-two-factor-card-title">
+				<span class="wfls-two-factor-card-title-icon" aria-hidden="true"><i class="<?php echo esc_attr(\WordfenceLS\Utility_Style::font_awesome_classes('key')); ?>"></i></span>
 				<strong><?php esc_html_e('Recovery Codes', 'wordfence'); ?></strong>
 			</div>
 		</div>
@@ -93,4 +94,4 @@ if (!defined('WORDFENCE_LS_VERSION')) { exit; }
 			});
 		});
 	})(jQuery);
-</script> 
+</script>

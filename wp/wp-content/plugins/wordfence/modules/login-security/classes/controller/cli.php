@@ -402,6 +402,7 @@ class Controller_CLI_Passkeys extends Controller_CLI_Command {
 		if (!$passkeyController->set_username_password_auth_enabled($user, $enabled)) {
 			\WP_CLI::error('Unable to save the user-specific passkey options.');
 		}
+		$enabled = $passkeyController->is_username_password_auth_enabled($user);
 
 		\WP_CLI::success(sprintf(
 			'Username/password login is now %s for %s.',

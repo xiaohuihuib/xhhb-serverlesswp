@@ -9,8 +9,9 @@ $recovery = $initializationData->get_recovery_codes();
 <div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 	<div class="wfls-block-header wfls-block-header-border-bottom">
 		<div class="wfls-block-header-content">
-			<div class="wfls-block-title">
-				<strong><?php esc_html_e('2. Enter Code from Authenticator App', 'wordfence'); ?></strong>
+			<div class="wfls-block-title wfls-two-factor-card-title">
+				<span class="wfls-two-factor-card-title-icon" aria-hidden="true"><i class="<?php echo esc_attr(\WordfenceLS\Utility_Style::font_awesome_classes('mobile')); ?>"></i></span>
+				<strong><?php esc_html_e('Enter Code from Authenticator App', 'wordfence'); ?></strong>
 			</div>
 		</div>
 	</div>
@@ -33,7 +34,7 @@ $recovery = $initializationData->get_recovery_codes();
 		
 		<hr class="wfls-half">
 		
-		<p><?php esc_html_e('Enter the code from your authenticator app below to verify and activate two-factor authentication for this account.', 'wordfence'); ?></p>
+		<p><?php esc_html_e('Enter the code from your authenticator app below to verify and activate two-factor authentication for this user.', 'wordfence'); ?></p>
 		<p><input type="text" id="wfls-activate-field" value="" size="6" maxlength="6" placeholder="123456" autocomplete="off"></p>
 	</div>
 	<div class="wfls-block-footer">

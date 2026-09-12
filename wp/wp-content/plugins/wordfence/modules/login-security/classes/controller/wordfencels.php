@@ -18,6 +18,9 @@ class Controller_WordfenceLS {
 	const SHORTCODE_2FA_MANAGEMENT = 'wordfence_2fa_management';
 	const SHORTCODE_PASSKEY_MANAGEMENT = 'wordfence_passkey_management';
 	const WOOCOMMERCE_ENDPOINT = 'wordfence-2fa';
+	const WOOCOMMERCE_PASSKEY_ENDPOINT = 'wordfence-passkeys';
+	const WOOCOMMERCE_ENDPOINTS_VERSION_KEY = 'wordfence_ls_woocommerce_endpoints_version';
+	const WOOCOMMERCE_ENDPOINTS_VERSION = 2;
 	const UI_STYLE_CONTEXT_CORE = 'core';
 	const UI_STYLE_CONTEXT_WFLS = 'wfls';
 	const USER_OPTION_DISMISSED_PASSKEY_HOSTNAME_LOCKOUT_SIGNATURE = 'wfls-dismissed-passkey-hostname-lockout-signature';
@@ -77,6 +80,9 @@ class Controller_WordfenceLS {
 		add_filter('wp_login_errors', array($this, '_wp_login_errors'), 25, 3);
 		if ($this->is_woocommerce_integration_enabled()) {
 			$this->init_woocommerce_actions();
+			if ($this->is_woocommerce_account_integration_enabled()) {
+				$this->maybe_purge_outdated_woocommerce_rewrite_rules();
+			}
 		}
 		add_action('user_new_form', array($this, '_user_new_form'));
 		add_action('user_register', array($this, '_user_register'));
@@ -120,9 +126,11 @@ class Controller_WordfenceLS {
 
 		if ($this->is_woocommerce_account_integration_enabled()) {
 			add_filter('woocommerce_account_menu_items', array($this, '_woocommerce_account_menu_items'));
-			add_filter('woocommerce_account_wordfence-2fa_endpoint', array($this, '_woocommerce_account_menu_content'));
+			add_action('woocommerce_account_' . self::WOOCOMMERCE_PASSKEY_ENDPOINT . '_endpoint', array($this, '_woocommerce_account_passkey_menu_content'));
+			add_action('woocommerce_account_' . self::WOOCOMMERCE_ENDPOINT . '_endpoint', array($this, '_woocommerce_account_menu_content'));
 			add_filter('woocommerce_get_query_vars', array($this, '_woocommerce_get_query_vars'));
 			add_action('wp_enqueue_scripts', array($this, '_woocommerce_account_enqueue_assets'));
+			add_action('template_redirect', array($this, '_woocommerce_account_2fa_endpoint_access'));
 		}
 	}
 	
@@ -406,7 +414,10 @@ END
 	 * @return bool
 	 */
 	private function passkey_hostname_login_blocker_applies($user, $passkeyController) {
-		if (!$user instanceof \WP_User || !$user->exists() || !Controller_Permissions::shared()->can_manage_settings($user)) {
+		if (!Controller_Settings::shared()->are_passkeys_enabled()
+			|| !$user instanceof \WP_User
+			|| !$user->exists()
+			|| !Controller_Permissions::shared()->can_manage_settings($user)) {
 			return false;
 		}
 
@@ -586,7 +597,7 @@ END
 		?>
 		<div id="<?php echo esc_attr(Controller_Notices::PERSISTENT_NOTICE_STANDALONE_DISCONTINUING) ?>" class="notice notice-warning <?php if (!(isset($_GET['page']) && $_GET['page'] == 'WFLS')): ?>is-dismissible<?php endif; ?> wfls-persistent-notice">
 			<p><strong><?php esc_html_e('Your site is currently using the "Wordfence Login Security” plugin.', 'wordfence') ?></strong></p>
-			<p><?php esc_html_e('This plugin will be discontinued on or around July 1, 2026, because its features are already included in the main Wordfence plugin.', 'wordfence') ?></p>
+			<p><?php esc_html_e('This plugin will be discontinued on or around August 12, 2026, because its features are already included in the main Wordfence plugin.', 'wordfence') ?></p>
 			<p><?php esc_html_e('To continue receiving updates and security improvements, please install and activate the main Wordfence plugin — also available for free.', 'wordfence') ?></p>
 			<p><a class="wfls-btn wfls-btn-primary wfls-btn-sm" href="<?php echo esc_url(Utility_URL::maybe_network_admin_url('plugin-install.php?s=wordfence&tab=search&type=term')) ?>"><?php esc_html_e('Install Wordfence', 'wordfence') ?></a></p>
 		</div>
@@ -605,7 +616,7 @@ END
 		Controller_Time::shared()->uninstall();
 		Controller_Permissions::shared()->uninstall();
 		
-		foreach (array(self::VERSION_KEY) as $opt) {
+		foreach (array(self::VERSION_KEY, self::WOOCOMMERCE_ENDPOINTS_VERSION_KEY) as $opt) {
 			if (is_multisite() && function_exists('delete_network_option')) {
 				delete_network_option(null, $opt);
 			}
@@ -630,7 +641,7 @@ END
 		
 		if (!defined('DONOTCACHEDB')) { define('DONOTCACHEDB', true); }
 		
-		$previousVersion = ((is_multisite() && function_exists('get_network_option')) ? get_network_option(null, self::VERSION_KEY, '0.0.0') : get_option(self::VERSION_KEY, '0.0.0'));
+		$previousVersion = ((is_multisite() && function_exists('get_network_option')) ? get_network_option(null, self::VERSION_KEY, false) : get_option(self::VERSION_KEY, false));
 		if (is_multisite() && function_exists('update_network_option')) {
 			update_network_option(null, self::VERSION_KEY, WORDFENCE_LS_VERSION); //In case we have a fatal error we don't want to keep running install.	
 		}
@@ -638,7 +649,19 @@ END
 			update_option(self::VERSION_KEY, WORDFENCE_LS_VERSION); //In case we have a fatal error we don't want to keep running install.
 		}
 		
-		Controller_DB::shared()->install();
+		$previousSchemaVersion = Controller_DB::shared()->install();
+		$freshInstall = $previousVersion === false && $previousSchemaVersion === 0;
+		$initializePasskeyRoles = $previousSchemaVersion < Controller_DB::PASSKEY_SCHEMA_VERSION;
+		$initialSettings = array();
+		if ($freshInstall) {
+			$initialSettings[Controller_Settings::OPTION_ENABLE_2FA] = Controller_Settings::DEFAULT_ENABLE_2FA;
+		}
+		if ($initializePasskeyRoles) {
+			$initialSettings[Controller_Settings::OPTION_ENABLE_PASSKEYS] = Controller_Settings::DEFAULT_ENABLE_PASSKEYS;
+		}
+		if (!empty($initialSettings)) {
+			Controller_Settings::shared()->set_multiple($initialSettings, true);
+		}
 		Controller_Settings::shared()->migrate_admin_2fa_requirements_to_roles();
 		Controller_Settings::shared()->set_defaults();
 		if (!function_exists('is_main_site') || is_main_site()) {
@@ -650,7 +673,7 @@ END
 		}
 
 		Controller_Time::shared()->install();
-		Controller_Permissions::shared()->install();
+		Controller_Permissions::shared()->install($freshInstall, $initializePasskeyRoles);
 
 		$this->purge_rewrite_rules();
 	}
@@ -661,15 +684,31 @@ END
 	}
 
 	/**
+	 * Invalidates cached rewrite rules once when the WooCommerce endpoint set changes.
+	 *
+	 * @return void
+	 */
+	private function maybe_purge_outdated_woocommerce_rewrite_rules() {
+		if ((int) get_option(self::WOOCOMMERCE_ENDPOINTS_VERSION_KEY, 0) >= self::WOOCOMMERCE_ENDPOINTS_VERSION) {
+			return;
+		}
+
+		$this->purge_rewrite_rules();
+		update_option(self::WOOCOMMERCE_ENDPOINTS_VERSION_KEY, self::WOOCOMMERCE_ENDPOINTS_VERSION);
+	}
+
+	/**
 	 * In most cases, this will be done internally by WooCommerce since we are using the woocommerce_get_query_vars filter, but when toggling the option on our settings page we must still do this manually
 	 */
 	private function register_rewrite_endpoints() {
 		add_rewrite_endpoint(self::WOOCOMMERCE_ENDPOINT, $this->is_woocommerce_account_integration_enabled() ? EP_PAGES : EP_NONE);
+		add_rewrite_endpoint(self::WOOCOMMERCE_PASSKEY_ENDPOINT, $this->is_woocommerce_account_integration_enabled() ? EP_PAGES : EP_NONE);
 	}
 
 	public function refresh_rewrite_rules() {
 		$this->register_rewrite_endpoints();
 		flush_rewrite_rules();
+		update_option(self::WOOCOMMERCE_ENDPOINTS_VERSION_KEY, self::WOOCOMMERCE_ENDPOINTS_VERSION);
 	}
 	
 	public function _block_xml_rpc() {
@@ -725,16 +764,16 @@ END
 
 		$hasPasskeys = false;
 		$shouldEnqueue = $useCAPTCHA;
-		if (!$shouldEnqueue) {
+		if (!$shouldEnqueue && Controller_Settings::shared()->is_2fa_enabled()) {
 			$shouldEnqueue = Controller_Users::shared()->any_2fa_active();
 		}
-		if (!$shouldEnqueue) {
+		if (!$shouldEnqueue && Controller_Settings::shared()->are_passkeys_enabled()) {
 			$hasPasskeys = Controller_Passkey::shared()->any_passkeys_active();
 			$shouldEnqueue = $hasPasskeys;
 		}
 
 		if ($shouldEnqueue) {
-			if (!$hasPasskeys) {
+			if (!$hasPasskeys && Controller_Settings::shared()->are_passkeys_enabled()) {
 				$hasPasskeys = Controller_Passkey::shared()->any_passkeys_active();
 			}
 			Model_Script::create('wflsi18njs', Model_Asset::js('wflsi18n.js'), array(), WORDFENCE_LS_VERSION)
@@ -849,7 +888,7 @@ END
 		foreach ($this->get_2fa_management_script_data() as $key => $data) {
 			wp_localize_script('wordfence-ls-admin', $key, $data);
 		}
-		$this->setupJSConstants();
+		$this->setupJSConstants(!$embedded);
 		$this->management_assets_enqueued = true;
 	}
 
@@ -878,8 +917,10 @@ END
 	/**
 	 * Leverages an internalized version of `wp_localize_script` to pass through a set of constants for the Vue side to
 	 * avoid hardcoding values.
+	 *
+	 * @param bool $includeUserSummary Whether to include settings-page user summary data.
 	 */
-	private function setupJSConstants() {
+	private function setupJSConstants($includeUserSummary = false) {
 		static $called;
 		if ($called) {
 			return;
@@ -887,7 +928,7 @@ END
 		$called = true;
 
 		global $wp_scripts;
-		$script = "var WordfenceLSJSConstants = " . wp_json_encode(Controller_Javascript::jsConstants()) . ";\n";
+		$script = "var WordfenceLSJSConstants = " . wp_json_encode(Controller_Javascript::jsConstants($includeUserSummary)) . ";\n";
 
 		$handle = WORDFENCE_LS_FROM_CORE ? 'wordfenceVuejs' : 'wordfence-ls-vue';
 		$data = $wp_scripts->get_data($handle, 'data');
@@ -945,6 +986,8 @@ END
 		$manage2FAURL = $manageURL . '#top#manage';
 		$managePasskeyURL = $manageURL . '#top#passkey';
 		$settingsURL = is_multisite() ? network_admin_url('admin.php?page=WFLS#top#settings') : admin_url('admin.php?page=WFLS#top#settings');
+		$twoFactorGloballyEnabled = Controller_Settings::shared()->is_2fa_enabled();
+		$passkeysGloballyEnabled = Controller_Settings::shared()->are_passkeys_enabled();
 		$userAllowed2fa = Controller_Users::shared()->can_activate_2fa($user);
 		$userAllowedPasskeys = Controller_Users::shared()->can_manage_passkey($user);
 		$viewerCanManageSettings = Controller_Permissions::shared()->can_manage_settings();
@@ -961,12 +1004,16 @@ END
 		$passkeyLockedOut = $requiresPasskey && !$hasPasskey;
 		$show2FAManageButton = $userAllowed2fa && ($viewerIsUser || $viewerCanManage2fa);
 		$showPasskeyManageButton = $userAllowedPasskeys && ($viewerIsUser || $viewerCanManagePasskeys);
-		$disabled2FAMessage = $viewerIsUser
-			? __('Your role does not have permission to activate two-factor authentication.', 'wordfence')
-			: ($viewerCanManageSettings ? __('Enable two-factor authentication on the settings page for this user\'s role to manage 2FA for the user.', 'wordfence') : __('Two-factor authentication is not enabled for this user\'s role.', 'wordfence'));
-		$disabledPasskeyMessage = $viewerIsUser
-			? __('Your role does not have permission to use passkeys.', 'wordfence')
-			: ($viewerCanManageSettings ? __('Enable passkeys on the settings page for this user\'s role to manage the user\'s passkeys.', 'wordfence') : __('Passkeys are not enabled for this user\'s role.', 'wordfence'));
+		$disabled2FAMessage = !$twoFactorGloballyEnabled
+			? __('Signing in using 2FA is currently disabled for this site. Existing credentials and role settings are preserved.', 'wordfence')
+			: ($viewerIsUser
+				? __('Your role does not have permission to activate two-factor authentication.', 'wordfence')
+				: ($viewerCanManageSettings ? __('Enable two-factor authentication on the settings page for this user\'s role to manage 2FA for the user.', 'wordfence') : __('Two-factor authentication is not enabled for this user\'s role.', 'wordfence')));
+		$disabledPasskeyMessage = !$passkeysGloballyEnabled
+			? __('Signing in using a passkey is currently disabled for this site. Existing passkeys and role settings are preserved.', 'wordfence')
+			: ($viewerIsUser
+				? __('Your role does not have permission to use passkeys.', 'wordfence')
+				: ($viewerCanManageSettings ? __('Enable passkeys on the settings page for this user\'s role to manage the user\'s passkeys.', 'wordfence') : __('Passkeys are not enabled for this user\'s role.', 'wordfence')));
 		if ($show2FASection || $showPasskeySection):
 ?>
 		<h2 id="wfls-user-settings"><?php esc_html_e('Wordfence Login Security', 'wordfence'); ?></h2>
@@ -979,14 +1026,14 @@ END
 						<p>
 							<strong><?php echo $lockedOut ? esc_html__('Locked Out', 'wordfence') : ($has2fa ? esc_html__('Active', 'wordfence') :  esc_html__('Inactive', 'wordfence')); ?>:</strong>
 							<?php echo $lockedOut ?
-								($viewerIsUser ? esc_html__('Two-factor authentication is required for your account, but has not been configured.', 'wordfence') : esc_html__('Two-factor authentication is required for this account, but has not been configured.', 'wordfence'))
+								($viewerIsUser ? esc_html__('Two-factor authentication is required for your account, but has not been configured.', 'wordfence') : esc_html__('Two-factor authentication is required for this user, but has not been configured.', 'wordfence'))
 								: ($has2fa ? esc_html__('Wordfence 2FA is active.', 'wordfence') :  esc_html__('Wordfence 2FA is inactive.', 'wordfence')); ?>
 							<a href="<?php echo Controller_Support::esc_supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_2FA); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Learn More', 'wordfence'); ?></a>
 						</p>
 						<?php if (!$has2fa && $inGracePeriod): ?>
 							<p><strong><?php echo sprintf($viewerIsUser ?
 										/* translators: Date */ esc_html__('Two-factor authentication must be activated for your account prior to %s to avoid losing access.', 'wordfence')
-								: /* translators: Date */ esc_html__('Two-factor authentication must be activated for this account prior to %s.', 'wordfence')
+								: /* translators: Date */ esc_html__('Two-factor authentication must be activated for this user prior to %s.', 'wordfence')
 								, Controller_Time::format_local_time('F j, Y g:i A', $requiredAt)) ?></strong></p>
 						<?php endif ?>
 						<?php if ($show2FAManageButton): ?><p><a href="<?php echo esc_url($manage2FAURL); ?>" class="button"><?php echo (!$has2fa && $viewerIsUser ? esc_html__('Activate 2FA', 'wordfence') : esc_html__('Manage 2FA', 'wordfence')); ?></a></p><?php endif ?>
@@ -1023,14 +1070,14 @@ END
 						<p>
 							<strong><?php echo $passkeyLockedOut ? esc_html__('Locked Out', 'wordfence') : ($hasPasskey ? esc_html__('Active', 'wordfence') :  esc_html__('Inactive', 'wordfence')); ?>:</strong>
 							<?php echo $passkeyLockedOut ?
-								($viewerIsUser ? esc_html__('A passkey is required for your account, but has not been configured.', 'wordfence') : esc_html__('A passkey is required for this account, but has not been configured.', 'wordfence'))
+								($viewerIsUser ? esc_html__('A passkey is required for your account, but has not been configured.', 'wordfence') : esc_html__('A passkey is required for this user, but has not been configured.', 'wordfence'))
 								: ($hasPasskey ? esc_html__('Wordfence passkeys are active.', 'wordfence') :  esc_html__('Wordfence passkeys are inactive.', 'wordfence')); ?>
 							<a href="<?php echo Controller_Support::esc_supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_PASSKEYS); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e('Learn More', 'wordfence'); ?></a>
 						</p>
 						<?php if (!$hasPasskey && $inPasskeyGracePeriod): ?>
 							<p><strong><?php echo sprintf($viewerIsUser ?
 										/* translators: Date */ esc_html__('A passkey must be added for your account prior to %s to avoid losing access.', 'wordfence')
-								: /* translators: Date */ esc_html__('A passkey must be added for this account prior to %s.', 'wordfence')
+								: /* translators: Date */ esc_html__('A passkey must be added for this user prior to %s.', 'wordfence')
 								, Controller_Time::format_local_time('F j, Y g:i A', $passkeyRequiredAt)) ?></strong></p>
 						<?php endif ?>
 						<?php if ($showPasskeyManageButton): ?><p><a href="<?php echo esc_url($managePasskeyURL); ?>" class="button"><?php echo (!$hasPasskey && $viewerIsUser ? esc_html__('Add Passkey', 'wordfence') : esc_html__('Manage Passkeys', 'wordfence')); ?></a></p><?php endif ?>
@@ -1264,7 +1311,7 @@ END
 			else if ($user && $user instanceof \WP_User && Controller_Passkey::shared()->should_block_username_password_auth($user)) {
 				return $this->_passkey_required_password_auth_disabled_error('wfls_xmlrpc_passkey_user_password_auth_disabled', $user);
 			}
-			else if (!Controller_Settings::shared()->get_bool(Controller_Settings::OPTION_XMLRPC_ENABLED)) { //XML-RPC call and we're not enforcing 2FA on it
+			else if (!Controller_Settings::shared()->is_2fa_enabled() || !Controller_Settings::shared()->get_bool(Controller_Settings::OPTION_XMLRPC_ENABLED)) { //XML-RPC call and we're not enforcing 2FA on it
 				return $user;
 			}
 		}
@@ -1291,7 +1338,7 @@ END
 		 * to see if the user has provided a combined password in the format `<password><code>`, populating $user from
 		 * that if so.
 		 */
-		if (!$isCombinedCheck && (!isset($_POST['wfls-token']) || !is_string($_POST['wfls-token'])) && (!is_object($user) || !($user instanceof \WP_User))) {
+		if (Controller_Settings::shared()->is_2fa_enabled() && !$isCombinedCheck && (!isset($_POST['wfls-token']) || !is_string($_POST['wfls-token'])) && (!is_object($user) || !($user instanceof \WP_User))) {
 			//Compatibility with WF legacy 2FA
 			$combinedTOTPRegex = '/((?:[0-9]{3}\s*){2})$/i';
 			$combinedRecoveryRegex = '/((?:[a-f0-9]{4}\s*){4})$/i';
@@ -1584,6 +1631,12 @@ END
 	
 	public function _admin_menu() {
 		$user = wp_get_current_user();
+		if (!Controller_Permissions::shared()->can_manage_settings($user)
+			&& !Controller_Settings::shared()->should_always_show_login_security_menu()
+			&& (!Controller_Users::shared()->can_activate_2fa($user) || $this->is_2fa_management_hidden_by_passkey_only($user))
+			&& !Controller_Users::shared()->can_manage_passkey($user)) {
+			return;
+		}
 		if (Controller_Notices::shared()->has_notice($user)) {
 			Controller_Users::shared()->requires_additional_auth($user, $gracePeriod);
 			if (!$gracePeriod) {
@@ -1631,12 +1684,12 @@ END
 			}
 		}
 		$viewingOtherUser = $user instanceof \WP_User && $viewer instanceof \WP_User && $user->exists() && $viewer->exists() && (int) $user->ID !== (int) $viewer->ID;
-		$canEditUsers = $viewingOtherUser && ($canEditOtherUsers2FA || $canEditOtherUsersPasskeys);
 		$targetUserRequestDenied = $requestedTargetUserMissing || ($viewingOtherUser && !$canEditOtherUsers2FA && !$canEditOtherUsersPasskeys);
 		$targetUser2FAPermissionDenied = $viewingOtherUser && !$canEditOtherUsers2FA;
 		$targetUserPasskeyPermissionDenied = $viewingOtherUser && !$canEditOtherUsersPasskeys;
 
 		$sections = array();
+		$featured = false;
 
 		if ($targetUserRequestDenied) {
 			$sections[] = array(
@@ -1670,10 +1723,12 @@ END
 				$page = isset($_GET[$pageKey]) ? max((int) $_GET[$pageKey], 1) : 1;
 				$title = $state['title'];
 				$lastPage = true;
-				if ($requiredAt === false)
+				if ($requiredAt === false) {
 					$users = array();
-				else
+				}
+				else {
 					$users = Controller_Users::shared()->get_inactive_2fa_users($roleKey, $state['gracePeriod'], $page, self::USERS_PER_PAGE, $lastPage);
+				}
 				$sections[] = array(
 					'tab' => new Model_Tab($key, $key, $title, $title),
 					'title' => new Model_Title($key, sprintf(/* translators: User count */ __('Users without 2FA active (%s)', 'wordfence'), $title) . ' - ' . $roleTitle),
@@ -1694,7 +1749,7 @@ END
 		}
 		else if (isset($_GET['role'])) {
 			$sections[] = array(
-				'tab' => new Model_Tab('manage', 'manage', __('Two-Factor Authentication', 'wordfence'), __('Two-Factor Authentication', 'wordfence'), false, __('2FA', 'wordfence')),
+				'tab' => new Model_Tab('manage', 'manage', __('2FA', 'wordfence'), __('Two-Factor Authentication', 'wordfence'), false, __('2FA', 'wordfence')),
 				'title' => new Model_Title('manage', __('Two-Factor Authentication', 'wordfence'), Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_2FA), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Two-Factor Authentication</span>', 'wordfence'), array('span'=>array('class'=>array()))))),
 				'content' => new Model_View('page/feature-disabled', array(
 					'title' => __('Permission Denied', 'wordfence'),
@@ -1704,39 +1759,69 @@ END
 			);
 		}
 		else {
-			$settingsURL = is_multisite() ? network_admin_url('admin.php?page=WFLS#top#settings') : admin_url('admin.php?page=WFLS#top#settings');
+			$featured = true;
+			$settingsBaseURL = is_multisite() ? network_admin_url('admin.php?page=WFLS') : admin_url('admin.php?page=WFLS');
+			$settingsURL = $settingsBaseURL . '#top#settings';
+			$enablePasskeysURL = add_query_arg('wfls-settings-anchor', 'enable-passkeys', $settingsBaseURL) . '#top#settings';
 			$showAdminAuthTabs = $administrator;
 			$showDisabledSelfAuthTabs = !$viewingOtherUser && Controller_Settings::shared()->should_always_show_login_security_menu() && user_can($user, Controller_Permissions::CAP_SHOW_LOGIN_SECURITY);
 			$canManageUserPasskey = !$targetUserPasskeyPermissionDenied && $this->can_manage_user_passkey($user);
 			$passkeysEnabledForUser = $targetUserPasskeyPermissionDenied ? true : Controller_Users::shared()->can_manage_passkey($user);
 			$showDisabledPasskeyTab = !$passkeysEnabledForUser && ($showDisabledSelfAuthTabs || ($viewingOtherUser && !$targetUserPasskeyPermissionDenied));
+			$passkeyAccountContext = null;
+			$twoFactorAccountContext = null;
+			if ($canEditOtherUsersPasskeys || $canEditOtherUsers2FA) {
+				$accountContextHTML = get_avatar($user->ID, 24, '', $user->user_login) . '<span><strong>' . esc_html__('User', 'wordfence') . '</strong>: <code>' . esc_html($user->user_login . (!$viewingOtherUser ? ' ' . __('(you)', 'wordfence') : '')) . '</code></span>';
+				$userEditURL = get_edit_user_link($user->ID);
+				if ($userEditURL) {
+					$accountContextHTML = '<a class="wfls-section-title-context-link" href="' . esc_url($userEditURL) . '">' . $accountContextHTML . '</a>';
+				}
+				$accountContext = new Model_HTML($accountContextHTML);
+				$passkeyAccountContext = $canEditOtherUsersPasskeys ? $accountContext : null;
+				$twoFactorAccountContext = $canEditOtherUsers2FA ? $accountContext : null;
+			}
 			if ($canManageUserPasskey || $targetUserPasskeyPermissionDenied || $showAdminAuthTabs || $showDisabledPasskeyTab) {
+				$passkeyTabTitle = $viewingOtherUser ? __('Passkeys', 'wordfence') : __('My Passkeys', 'wordfence');
+				$canRegisterUserPasskey = $passkeysEnabledForUser && $this->can_register_user_passkey($user);
 				$sections[] = array(
-					'tab' => new Model_Tab('passkey', 'passkey', __('Passkeys', 'wordfence'), __('Passkey', 'wordfence')),
-					'title' => new Model_Title('passkey', __('Passkeys', 'wordfence'), Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_PASSKEYS), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Passkeys</span>', 'wordfence'), array('span'=>array('class'=>array()))))),
+					'tab' => new Model_Tab('passkey', 'passkey', $passkeyTabTitle, $passkeyTabTitle, false, null, array('icon' => 'passkey')),
+					'title' => new Model_Title('passkey', $passkeyTabTitle, Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_PASSKEYS), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about passkeys</span>', 'wordfence'), array('span'=>array('class'=>array())))), array(
+						'subtitle' => __('Passkeys let you sign in securely using your fingerprint, face, device PIN, or password.', 'wordfence'),
+						'icon' => 'passkey',
+						'context' => $passkeyAccountContext,
+						'featured' => true,
+					)),
 					'content' => new Model_View('page/passkey', array(
 						'user' => $user,
-						'canEditUsers' => $canEditUsers,
-						'canRegisterPasskeys' => $passkeysEnabledForUser && $this->can_register_user_passkey($user),
+						'canRegisterPasskeys' => $canRegisterUserPasskey,
 						'passkeysEnabledForUser' => $passkeysEnabledForUser,
 						'targetUserPermissionDenied' => $targetUserPasskeyPermissionDenied,
 						'settingsURL' => $settingsURL,
+						'enablePasskeysURL' => $enablePasskeysURL,
 						'showSettingsButton' => $administrator,
-						'initialAllowedHostnames' => $this->initial_allowed_passkey_hostnames_for_registration($user),
+						'initialAllowedHostnames' => $canRegisterUserPasskey ? $this->initial_allowed_passkey_hostnames_for_registration($user) : array(),
 					)),
 				);
 			}
 
+			$hide2FAForPasskeyOnly = $this->is_2fa_management_hidden_by_passkey_only($user);
 			$canManageUser2FA = !$targetUser2FAPermissionDenied && $this->can_manage_user_2fa($user);
 			$twoFactorEnabledForUser = $targetUser2FAPermissionDenied ? true : Controller_Users::shared()->can_activate_2fa($user);
 			$showDisabled2FATab = !$twoFactorEnabledForUser && ($showDisabledSelfAuthTabs || ($viewingOtherUser && !$targetUser2FAPermissionDenied));
-			if ($canManageUser2FA || $targetUser2FAPermissionDenied || $showAdminAuthTabs || $showDisabled2FATab) {
+			if (!$hide2FAForPasskeyOnly && ($canManageUser2FA || $targetUser2FAPermissionDenied || $showAdminAuthTabs || $showDisabled2FATab)) {
+				$twoFactorTabTitle = $viewingOtherUser ? __('2FA', 'wordfence') : __('My 2FA', 'wordfence');
+				$twoFactorPageTitle = $viewingOtherUser ? __('Two-Factor Authentication', 'wordfence') : __('My 2FA', 'wordfence');
 				$sections[] = array(
-					'tab' => new Model_Tab('manage', 'manage', __('Two-Factor Authentication', 'wordfence'), __('Two-Factor Authentication', 'wordfence'), false, __('2FA', 'wordfence')),
-					'title' => new Model_Title('manage', __('Two-Factor Authentication', 'wordfence'), Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_2FA), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Two-Factor Authentication</span>', 'wordfence'), array('span'=>array('class'=>array()))))),
+					'tab' => new Model_Tab('manage', 'manage', $twoFactorTabTitle, $twoFactorPageTitle, false, $twoFactorTabTitle, array('icon' => '2fa')),
+					'title' => new Model_Title('manage', $twoFactorPageTitle, Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_2FA), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Two-Factor Authentication</span>', 'wordfence'), array('span'=>array('class'=>array())))), array(
+						'subtitle' => __('Protect password sign-in with two-factor authentication.', 'wordfence'),
+						'description' => new Model_HTML(wp_kses(sprintf(/* translators: Support URL */ __('Works with Google Authenticator, FreeOTP, Authy, and other TOTP-compatible apps. <a href="%s" target="_blank" rel="noopener noreferrer">View tested apps</a>', 'wordfence'), Controller_Support::esc_supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY_2FA)), array('a'=>array('href'=>array(), 'target'=>array(), 'rel'=>array())))),
+						'icon' => '2fa',
+						'context' => $twoFactorAccountContext,
+						'featured' => true,
+					)),
 					'content' => new Model_View('page/manage', array(
 						'user' => $user,
-						'canEditUsers' => $canEditUsers,
 						'twoFactorEnabledForUser' => $twoFactorEnabledForUser,
 						'targetUserPermissionDenied' => $targetUser2FAPermissionDenied,
 						'settingsURL' => $settingsURL,
@@ -1746,9 +1831,16 @@ END
 			}
 			
 			if ($administrator) {
+				$settingsActions = new Model_HTML('<div class="wfls-section-title-settings-actions wordfence-vue-wrapper" data-base-component="WFLSSettingsButtons"></div>');
 				$sections[] = array(
-					'tab' => new Model_Tab('settings', 'settings', __('Settings', 'wordfence'), __('Settings', 'wordfence')),
-					'title' => new Model_Title('settings', __('Login Security Settings', 'wordfence'), Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Login Security</span>', 'wordfence'), array('span'=>array('class'=>array()))))),
+					'tab' => new Model_Tab('settings', 'settings', __('Settings', 'wordfence'), __('Settings', 'wordfence'), false, null, array('icon' => 'settings')),
+					'title' => new Model_Title('settings', __('Login Security Settings', 'wordfence'), Controller_Support::supportURL(Controller_Support::ITEM_MODULE_LOGIN_SECURITY), new Model_HTML(wp_kses(__('Learn more<span class="wfls-hidden-xs"> about Login Security</span>', 'wordfence'), array('span'=>array('class'=>array())))), array(
+						'subtitle' => __('Control how users sign in and which authentication methods are required.', 'wordfence'),
+						'icon' => 'settings',
+						'action' => $settingsActions,
+						'helpBelowSubtitle' => true,
+						'featured' => true,
+					)),
 					'content' => new Model_View('page/settings', array(
 						'hasWoocommerce' => $this->has_woocommerce()
 					)),
@@ -1758,6 +1850,7 @@ END
 		
 		$view = new Model_View('page/page', array(
 			'sections' => $sections,
+			'featured' => $featured,
 		));
 		echo $view->render();
 	}
@@ -1868,24 +1961,80 @@ END
 	}
 
 	public function _woocommerce_account_menu_items($items) {
-		if ($this->can_user_activate_2fa_self() || $this->can_user_activate_passkey_self() || Controller_Permissions::shared()->can_manage_settings() || $this->should_show_disabled_self_authentication_views()) {
-			$endpointId = self::WOOCOMMERCE_ENDPOINT;
-			$label = __('Wordfence Login Security', 'wordfence');
-			if (!Utility_Array::insertAfter($items, 'edit-account', $endpointId, $label)) {
+		$user = wp_get_current_user();
+		$menuItems = array();
+		if (Controller_Users::shared()->can_manage_passkey($user)) {
+			$menuItems[self::WOOCOMMERCE_PASSKEY_ENDPOINT] = __('Wordfence Passkeys', 'wordfence');
+		}
+		if (Controller_Users::shared()->can_activate_2fa($user) && !$this->is_2fa_management_hidden_by_passkey_only($user)) {
+			$menuItems[self::WOOCOMMERCE_ENDPOINT] = __('Wordfence 2FA', 'wordfence');
+		}
+
+		$insertAfter = 'edit-account';
+		foreach ($menuItems as $endpointId => $label) {
+			if (!Utility_Array::insertAfter($items, $insertAfter, $endpointId, $label)) {
 				$items[$endpointId] = $label;
 			}
+			$insertAfter = $endpointId;
 		}
 		return $items;
 	}
 
+	/**
+	 * Returns whether an active role or user-level Passkeys-only requirement supersedes 2FA management for a user.
+	 *
+	 * @param \WP_User $user The user whose management navigation is being evaluated.
+	 * @return bool
+	 */
+	private function is_2fa_management_hidden_by_passkey_only($user) {
+		return Controller_Settings::shared()->are_passkeys_enabled()
+			&& !Controller_Passkey::shared()->is_effective_username_password_auth_enabled($user);
+	}
+
+	/**
+	 * Converts unavailable WooCommerce authentication-management endpoints to a 404 for the current user.
+	 *
+	 * @return void
+	 */
+	public function _woocommerce_account_2fa_endpoint_access() {
+		if (!function_exists('is_wc_endpoint_url')) {
+			return;
+		}
+
+		$user = wp_get_current_user();
+		if (is_wc_endpoint_url(self::WOOCOMMERCE_PASSKEY_ENDPOINT)) {
+			$available = Controller_Users::shared()->can_manage_passkey($user);
+		}
+		else if (is_wc_endpoint_url(self::WOOCOMMERCE_ENDPOINT)) {
+			$available = Controller_Users::shared()->can_activate_2fa($user)
+				&& !$this->is_2fa_management_hidden_by_passkey_only($user);
+		}
+		else {
+			return;
+		}
+
+		if ($available) {
+			return;
+		}
+
+		global $wp_query;
+		if (is_object($wp_query) && method_exists($wp_query, 'set_404')) {
+			$wp_query->set_404();
+		}
+		status_header(404);
+		nocache_headers();
+	}
+
 	public function _woocommerce_get_query_vars($query_vars) {
 		$query_vars[self::WOOCOMMERCE_ENDPOINT] = self::WOOCOMMERCE_ENDPOINT;
+		$query_vars[self::WOOCOMMERCE_PASSKEY_ENDPOINT] = self::WOOCOMMERCE_PASSKEY_ENDPOINT;
 		return $query_vars;
 	}
 
 	private function can_user_activate_2fa_self($user = null) {
-		if ($user === null)
+		if ($user === null) {
 			$user = wp_get_current_user();
+		}
 		return user_can($user, Controller_Permissions::CAP_ACTIVATE_2FA_SELF);
 	}
 
@@ -1978,9 +2127,14 @@ END
 		$passkeysEnabledForUser = Controller_Users::shared()->can_manage_passkey($user);
 		$viewerCanManageSettings = Controller_Permissions::shared()->can_manage_settings();
 		$showDisabledView = !$passkeysEnabledForUser && ($viewerCanManageSettings || $this->should_show_disabled_self_authentication_views($user));
-		if ($this->can_manage_user_passkey($user) || $showDisabledView) {
+		$viewer = wp_get_current_user();
+		$userCanManageOwnPasskeys = $viewer instanceof \WP_User && (int) $viewer->ID === (int) $user->ID && $this->can_user_activate_passkey_self($user);
+		if ($this->can_manage_user_passkey($user) || $userCanManageOwnPasskeys || $showDisabledView) {
 			$assets = $this->management_assets_enqueued ? array() : $this->get_2fa_management_assets(true);
-			$scriptData = $this->management_assets_enqueued ? array() : $this->get_2fa_management_script_data();
+			$scriptData = $this->management_assets_enqueued || !$passkeysEnabledForUser ? array() : $this->get_2fa_management_script_data();
+			$passkeys = $passkeysEnabledForUser ? Controller_Passkey::shared()->get_passkeys($user) : array();
+			$canRegisterUserPasskey = $passkeysEnabledForUser && $this->can_register_user_passkey($user);
+			$initialAllowedHostnames = $canRegisterUserPasskey ? $this->initial_allowed_passkey_hostnames_for_registration($user) : array();
 			return Model_View::create(
 				'page/passkey-embedded',
 				array(
@@ -1988,12 +2142,12 @@ END
 					'stacked' => $stacked,
 					'assets' => $assets,
 					'scriptData' => $scriptData,
-					'passkeys' => Controller_Passkey::shared()->get_passkeys($user),
-					'canRegisterPasskeys' => $passkeysEnabledForUser && $this->can_register_user_passkey($user),
+					'passkeys' => $passkeys,
+					'canRegisterPasskeys' => $canRegisterUserPasskey,
 					'passkeysEnabledForUser' => $passkeysEnabledForUser,
 					'settingsURL' => is_multisite() ? network_admin_url('admin.php?page=WFLS#top#settings') : admin_url('admin.php?page=WFLS#top#settings'),
 					'showSettingsButton' => $viewerCanManageSettings,
-					'initialAllowedHostnames' => $this->initial_allowed_passkey_hostnames_for_registration($user),
+					'initialAllowedHostnames' => $initialAllowedHostnames,
 				)
 			)->render();
 		}
@@ -2001,9 +2155,20 @@ END
 		return $permissionDeniedIfUnavailable ? Model_View::create('page/permission-denied')->render() : '';
 	}
 
+	/**
+	 * Renders the Passkey management interface for its WooCommerce account endpoint.
+	 *
+	 * @return void
+	 */
+	public function _woocommerce_account_passkey_menu_content() {
+		echo $this->render_embedded_user_passkey_management_interface();
+	}
+
 	public function _woocommerce_account_menu_content() {
-		echo $this->render_embedded_user_passkey_management_interface(null, null, false);
-		echo $this->render_embedded_user_2fa_management_interface(null, false);
+		if ($this->is_2fa_management_hidden_by_passkey_only(wp_get_current_user())) {
+			return;
+		}
+		echo $this->render_embedded_user_2fa_management_interface();
 	}
 
 	private function does_current_page_include_shortcode($shortcode) {

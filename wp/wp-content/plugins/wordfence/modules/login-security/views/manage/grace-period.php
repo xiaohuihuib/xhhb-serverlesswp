@@ -15,11 +15,13 @@ if ($ownUser->ID == $user->ID) {
 $canManageGracePeriod = current_user_can(\WordfenceLS\Controller_Permissions::CAP_MANAGE_SETTINGS);
 $defaultGracePeriod = \WordfenceLS\Controller_Settings::shared()->get_user_2fa_grace_period();
 $hasGracePeriod =  $defaultGracePeriod > 0;
+$gracePeriodIcon = \WordfenceLS\Utility_Style::font_awesome_classes($gracePeriod ? 'clock-o' : 'lock');
 ?>
 <div class="wfls-block wfls-always-active wfls-flex-item-full-width">
 	<div class="wfls-block-header wfls-block-header-border-bottom">
 		<div class="wfls-block-header-content">
-			<div class="wfls-block-title">
+			<div class="wfls-block-title wfls-two-factor-card-title">
+				<span class="wfls-two-factor-card-title-icon" aria-hidden="true"><i class="<?php echo esc_attr($gracePeriodIcon); ?>"></i></span>
 				<strong><?php echo $gracePeriod ? esc_html__('Grace Period', 'wordfence') : esc_html__('Locked Out', 'wordfence') ?></strong>
 			</div>
 		</div>
@@ -43,7 +45,7 @@ $hasGracePeriod =  $defaultGracePeriod > 0;
 			<p>
 				<?php echo $ownAccount ?
 				esc_html__('Two-factor authentication is required for your account, but has not been configured.', 'wordfence') :
-				esc_html__('Two-factor authentication is required for this account, but has not been configured.', 'wordfence') ?>
+				esc_html__('Two-factor authentication is required for this user, but has not been configured.', 'wordfence') ?>
 			</p>
 			<?php if ($canManageGracePeriod): ?>
 				<?php echo \WordfenceLS\Model_View::create(

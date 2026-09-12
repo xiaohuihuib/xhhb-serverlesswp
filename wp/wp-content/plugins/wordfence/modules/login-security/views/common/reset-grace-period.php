@@ -5,8 +5,9 @@ $idPrefix = isset($idPrefix) && is_string($idPrefix) ? $idPrefix : 'wfls-';
 $overrideInputID = $idPrefix . 'user-grace-period-override';
 $buttonID = $idPrefix . 'reset-grace-period';
 $failureMessageID = $idPrefix . 'reset-grace-period-failed';
-if (!isset($defaultGracePeriod))
+if (!isset($defaultGracePeriod)) {
 	$defaultGracePeriod = \WordfenceLS\Controller_Settings::shared()->get_user_2fa_grace_period();
+}
 $savedGracePeriodOverride = \WordfenceLS\Controller_Users::shared()->get_grace_period_override($user);
 if ($savedGracePeriodOverride !== null) {
 	$defaultGracePeriod = $savedGracePeriodOverride;
@@ -14,7 +15,7 @@ if ($savedGracePeriodOverride !== null) {
 $defaultGracePeriod = max($defaultGracePeriod, 1);
 $errorMessage = $gracePeriod === null ? __('Unable to Activate Authentication Grace Period', 'wordfence') : __('Unable to Reset Authentication Grace Period', 'wordfence');
 ?>
-<div class="wfls-add-top wfls-add-bottom wfls-grace-period-container wfls-flex-horizontal wfls-flex-align-left">
+<div class="wfls-grace-period-container wfls-flex-horizontal wfls-flex-align-left">
 	<div class="wfls-grace-period-input-container">
 		<label for="<?php echo esc_attr($overrideInputID); ?>" style="display: none"><?php esc_html_e('Grace Period Override', 'wordfence') ?></label>
 		<input type="text" id="<?php echo esc_attr($overrideInputID); ?>" maxlength="2" pattern="[0-9]+" value="<?php echo (int) $defaultGracePeriod ?>">
