@@ -1,0 +1,41 @@
+{
+    "name": "ancozockt/integrate-umami",
+    "description": "Wordpress Umami Analytics Integration",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Ancozockt",
+            "email": "info@ancozockt.de"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*",
+        "dealerdirect/phpcodesniffer-composer-installer": "*",
+        "wp-coding-standards/wpcs": "*",
+        "phpcompatibility/php-compatibility": "*"
+    },
+    "autoload": {
+        "classmap": [
+            "inc/"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "install-codestandards": [
+            "PHPCSStandards\\Composer\\Plugin\\Installers\\PHPCodeSniffer\\Plugin::run"
+        ],
+        "post-install-cmd": [
+            "@install-codestandards"
+        ],
+        "php:lint": "./vendor/bin/phpcs . -s",
+        "php:lint-fix": "./vendor/bin/phpcbf ."
+    }
+}
