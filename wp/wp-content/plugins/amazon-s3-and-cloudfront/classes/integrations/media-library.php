@@ -67,10 +67,9 @@ class Media_Library extends Integration {
 			3
 		);
 
-		// TODO: Remove for v4.0.0.
-		if ( ! $this->as3cf->is_upgraded() ) {
-			add_filter( 'wp_unique_filename', array( $this, 'wp_unique_filename' ), 10, 3 );
-		}
+		// While the pre_wp_unique_filename_file_list filter should supply the source_paths needed by wp_unique_file
+		// in most cases, in some scenarios it will not, so we need to fall back to iteratively testing the proposed filename.
+		add_filter( 'wp_unique_filename', array( $this, 'wp_unique_filename' ), 10, 3 );
 
 		add_filter( 'wp_update_attachment_metadata', array( $this, 'wp_update_attachment_metadata' ), 110, 2 );
 		add_filter( 'pre_delete_attachment', array( $this, 'pre_delete_attachment' ), 20 );
@@ -457,6 +456,43 @@ class Media_Library extends Integration {
 			return $files;
 		}
 
+		// Get list of offloaded files in dir, but only if we're not going to grab a huge amount of file names.
+		$relative_dir = substr( $dir, strlen( $upload_dir['basedir'] ) );
+
+		/**
+		 * Limit how many source paths are allowed to be returned for analysis during unique name check.
+		 *
+		 * If the limit would be exceeded, we'll not override the filesystem scan,
+		 * merge it with potentially removed from local source paths,
+		 * and rely on the later wp_unique_filename filter to iteratively test uniqueness.
+		 *
+		 * @param int    $limit        Default 10,000, min 0 (abort), max PHP_INT_MAX (good luck with that).
+		 * @param string $relative_dir The path relative to the uploads directory being checked.
+		 * @param string $filename     The proposed filename for the new file.
+		 *
+		 * @return int
+		 */
+		$offloaded_files_count_limit = max(
+			0,
+			min(
+				PHP_INT_MAX,
+				(int) apply_filters( 'as3cf_get_source_paths_for_dir_count_limit', 10000, $relative_dir, $filename )
+			)
+		);
+
+		$offloaded_files_count = File::get_source_paths_for_dir_count( $relative_dir, $filename );
+
+		// Nothing matches, or there's too many to check at once, bail.
+		if ( 0 === $offloaded_files_count || $offloaded_files_count > $offloaded_files_count_limit ) {
+			return $files;
+		}
+
+		$offloaded_files = File::get_source_paths_for_dir( $relative_dir, $filename );
+
+		if ( ! empty( $offloaded_files ) ) {
+			$offloaded_files = array_map( 'wp_basename', $offloaded_files );
+		}
+
 		// By implementing this filter, we're stopping the usual directory scan, so we need to do it.
 		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- mimicking WordPress
 		$scanned_files = @scandir( $dir );
@@ -467,14 +503,6 @@ class Media_Library extends Integration {
 
 		if ( empty( $files ) || ! is_array( $files ) ) {
 			$files = array();
-		}
-
-		// Get list of offloaded files.
-		$relative_dir    = substr( $dir, strlen( $upload_dir['basedir'] ) );
-		$offloaded_files = File::get_source_paths_for_dir( $relative_dir );
-
-		if ( ! empty( $offloaded_files ) ) {
-			$offloaded_files = array_map( 'wp_basename', $offloaded_files );
 		}
 
 		return array_unique( array_merge( $files, $scanned_files, $offloaded_files ) );
@@ -1021,14 +1049,16 @@ class Media_Library extends Integration {
 	 * Maybe encode URLs for images that represent an attachment
 	 *
 	 * @param array|bool   $image
-	 * @param int          $attachment_id
+	 * @param mixed        $attachment_id
 	 * @param string|array $size
 	 * @param bool         $icon
 	 *
-	 * @return array
+	 * @return array|bool
 	 */
 	public function maybe_encode_wp_get_attachment_image_src( $image, $attachment_id, $size, $icon ) {
-		if ( empty( $attachment_id ) ) {
+		// Core applies this filter with whatever the caller passed it, which is
+		// not always an attachment id. It has already resolved the image by now.
+		if ( ! is_numeric( $attachment_id ) || $attachment_id < 1 ) {
 			return $image;
 		}
 

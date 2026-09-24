@@ -807,7 +807,10 @@ class AS3CF_Plugin_Compatibility {
 
 			if ( ! empty( $data['sizes'] ) ) {
 				$data['sizes'] = array_map( function ( $size ) {
-					$size['file'] = AS3CF_Utils::encode_filename_in_path( $size['file'] );
+					// Corrupt `_wp_attachment_metadata` can carry size entries with no usable filename.
+					if ( is_array( $size ) && ! empty( $size['file'] ) && is_string( $size['file'] ) ) {
+						$size['file'] = AS3CF_Utils::encode_filename_in_path( $size['file'] );
+					}
 
 					return $size;
 				}, $data['sizes'] );
@@ -953,7 +956,10 @@ class AS3CF_Plugin_Compatibility {
 		// Ensure each size filename is encoded the same way as URL.
 		if ( ! empty( $image_meta['sizes'] ) ) {
 			$image_meta['sizes'] = array_map( function ( $size ) {
-				$size['file'] = AS3CF_Utils::encode_filename_in_path( $size['file'] );
+				// Corrupt `_wp_attachment_metadata` can carry size entries with no usable filename.
+				if ( is_array( $size ) && ! empty( $size['file'] ) && is_string( $size['file'] ) ) {
+					$size['file'] = AS3CF_Utils::encode_filename_in_path( $size['file'] );
+				}
 
 				return $size;
 			}, $image_meta['sizes'] );

@@ -412,6 +412,11 @@ abstract class AS3CF_Filter {
 
 		// Add additional image size URLs
 		foreach ( $meta['sizes'] as $size ) {
+			// Corrupt `_wp_attachment_metadata` can carry size entries with no usable filename.
+			if ( ! is_array( $size ) || empty( $size['file'] ) || ! is_string( $size['file'] ) ) {
+				continue;
+			}
+
 			$base_urls[] = str_replace( $basename, AS3CF_Utils::encode_filename_in_path( $size['file'] ), $base_url );
 		}
 

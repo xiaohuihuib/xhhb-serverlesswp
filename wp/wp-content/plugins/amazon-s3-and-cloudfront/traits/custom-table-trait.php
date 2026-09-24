@@ -28,6 +28,13 @@ trait Custom_Table_Trait {
 	private static bool $cache_enabled = true;
 
 	/**
+	 * How long should our objects persist in the external cache.
+	 *
+	 * @var int
+	 */
+	private static int $cache_expiry_seconds = -1;
+
+	/**
 	 * Every record must have a last upgrade routine value.
 	 *
 	 * @var int
@@ -66,7 +73,7 @@ trait Custom_Table_Trait {
 				static::install_table( $table_name, $plugin_version, $upgrade_routine );
 
 				// We've potentially changed format of stored cached data or their keys, so flush cache.
-				// We don't care whether it was succesfull or not, at least we tried.
+				// We don't care whether it was successful or not, at least we tried.
 				wp_cache_flush();
 
 				update_option( $table_name . '_schema_version', $plugin_version );
@@ -241,13 +248,39 @@ trait Custom_Table_Trait {
 	/**
 	 * Add the given object to the object cache.
 	 *
-	 * @param object $object
+	 * @param object $object The object to be added to the external cache.
 	 */
 	protected static function add_to_object_cache( object $object ): void {
+		if ( ! self::$cache_enabled ) {
+			return;
+		}
+
 		$keys = static::get_cache_keys_for_object( $object );
 
 		if ( empty( $keys ) ) {
 			return;
+		}
+
+		if ( 0 > self::$cache_expiry_seconds ) {
+			/**
+			 * How long should one of our objects persist in an external cache.
+			 *
+			 * @param int    $cache_expiry_seconds Default 5 mins, min 0 (no expiry), max 1 day.
+			 * @param string $base_table_name      The base table name as context.
+			 *
+			 * @return int
+			 */
+			self::$cache_expiry_seconds = max(
+				0,
+				min(
+					DAY_IN_SECONDS,
+					(int) apply_filters(
+						'as3cf_object_cache_expiry_seconds',
+						5 * MINUTE_IN_SECONDS,
+						self::get_base_table_name()
+					)
+				)
+			);
 		}
 
 		$items = array_fill_keys( $keys, $object );
@@ -255,7 +288,7 @@ trait Custom_Table_Trait {
 
 		// TODO: Switch to wp_cache_set_multiple( $items, $group ) when WP 6.0+ is min required.
 		foreach ( $items as $key => $value ) {
-			wp_cache_set( $key, $value, $group );
+			wp_cache_set( $key, $value, $group, self::$cache_expiry_seconds );
 		}
 	}
 

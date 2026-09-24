@@ -125,16 +125,19 @@ abstract class Item {
 		// Set offload data from previous duplicate if exact match by source path exists.
 		if ( empty( $path ) ) {
 			$prev_items = static::get_by_source_path(
-				array( $source_path, $original_source_path ),
+				array( $source_path ),
 				$this->source_id(),
 				true,
 				true
 			);
 
+			// A true duplicate is of same type, and has same source path and original source path.
 			if (
 				! is_wp_error( $prev_items ) &&
 				! empty( $prev_items[0] ) &&
-				is_a( $prev_items[0], get_class( $this ) )
+				is_a( $prev_items[0], get_class( $this ) ) &&
+				$prev_items[0]->source_path() === $source_path &&
+				$prev_items[0]->original_source_path() === $original_source_path
 			) {
 				/** @var Item $prev_item */
 				$prev_item  = $prev_items[0];
@@ -292,8 +295,6 @@ abstract class Item {
 		return array(
 			'id'          => array( 'id' ),
 			'source_id'   => array( 'source_type', 'source_id' ),
-			'path'        => array( 'path' ),
-			'source_path' => array( 'source_type', 'source_path' ),
 			'bucket_path' => array( 'bucket', 'path' ),
 		);
 	}
@@ -543,16 +544,17 @@ abstract class Item {
 			$old_as3cf_file->delete();
 		}
 
-		// If one or more duplicate exists that still has the same source paths, keep them in step.
+		// If one or more duplicate exists that still has the same source path, keep them in step.
 		if ( $update && $update_duplicates ) {
 			$duplicates = static::get_by_source_path(
-				array( $this->source_path(), $this->original_source_path() ),
+				array( $this->source_path() ),
 				$this->source_id()
 			);
 
 			if ( ! empty( $duplicates ) && ! is_wp_error( $duplicates ) ) {
 				/** @var Item $duplicate */
 				foreach ( $duplicates as $duplicate ) {
+					// Only update true duplicates that also have same original source path and source type.
 					if (
 						! is_wp_error( $duplicate ) &&
 						$duplicate->source_type() === $this->source_type() &&
@@ -714,11 +716,14 @@ abstract class Item {
 	 *
 	 * While source id isn't strictly unique, it is by source type, which is always used in queries based on called class.
 	 *
-	 * @param int $source_id
+	 * Callers include hook handlers that are given whatever a theme or plugin
+	 * passed to core, so the parameter is deliberately untyped and validated here.
+	 *
+	 * @param mixed $source_id
 	 *
 	 * @return Item|bool
 	 */
-	public static function get_by_source_id( int $source_id ): Item|bool {
+	public static function get_by_source_id( mixed $source_id ): Item|bool {
 		global $wpdb;
 
 		if ( ! is_numeric( $source_id ) ) {

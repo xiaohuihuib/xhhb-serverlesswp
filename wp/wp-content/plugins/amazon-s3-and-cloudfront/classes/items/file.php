@@ -87,11 +87,9 @@ class File {
 	 */
 	protected static function get_cache_keys(): array {
 		return array(
-			'id'               => array( 'id' ),
-			'path_size'        => array( 'path', 'size' ),
-			'source_path_size' => array( 'source_path', 'size' ),
-			'item_size'        => array( 'item_id', 'size' ),
-			'bucket_path'      => array( 'bucket', 'path' ),
+			'id'          => array( 'id' ),
+			'source_path' => array( 'source_path', 'size' ),
+			'bucket_path' => array( 'bucket', 'path' ),
 		);
 	}
 
@@ -571,21 +569,25 @@ class File {
 	/**
 	 * Get all local source paths in given (relative) directory.
 	 *
-	 * @param string $dir Relative local dir to check against.
+	 * @param string $dir      Relative local dir to check against.
+	 * @param string $filename Optional filename to reduce source paths by, image edit suffix and extension will be removed.
 	 *
 	 * @return array
 	 */
-	public static function get_source_paths_for_dir( string $dir ): array {
+	public static function get_source_paths_for_dir( string $dir, string $filename = '' ): array {
 		global $wpdb;
 
 		$sql = 'SELECT source_path FROM ' . static::get_table_name();
 
-		if ( ! empty( $dir ) ) {
-			$sql .= ' WHERE source_path LIKE %s';
-			$dir = AS3CF_Utils::trailingslash_prefix( $dir ) . '%';
+		$path = empty( $dir ) ? '' : AS3CF_Utils::trailingslash_prefix( $dir );
+		$path .= empty( $filename ) ? '' : AS3CF_Utils::strip_image_edit_suffix_and_extension( $filename );
+
+		if ( ! empty( $path ) ) {
+			$sql  .= ' WHERE source_path LIKE %s';
+			$path .= '%';
 
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-			$sql = $wpdb->prepare( $sql, $dir );
+			$sql = $wpdb->prepare( $sql, $path );
 		}
 
 		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
@@ -596,6 +598,40 @@ class File {
 		}
 
 		return array();
+	}
+
+	/**
+	 * Get a count of all local source paths in given (relative) directory.
+	 *
+	 * @param string $dir      Relative local dir to check against.
+	 * @param string $filename Optional filename to reduce source paths by, image edit suffix and extension will be removed.
+	 *
+	 * @return int
+	 */
+	public static function get_source_paths_for_dir_count( string $dir, string $filename = '' ): int {
+		global $wpdb;
+
+		$sql = 'SELECT COUNT(*) FROM ' . static::get_table_name();
+
+		$path = empty( $dir ) ? '' : AS3CF_Utils::trailingslash_prefix( $dir );
+		$path .= empty( $filename ) ? '' : AS3CF_Utils::strip_image_edit_suffix_and_extension( $filename );
+
+		if ( ! empty( $path ) ) {
+			$sql  .= ' WHERE source_path LIKE %s';
+			$path .= '%';
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$sql = $wpdb->prepare( $sql, $path );
+		}
+
+		// phpcs:ignore WordPress.DB,PluginCheck.Security.DirectDB.UnescapedDBParameter -- already prepared, must not be cached
+		$count = $wpdb->get_var( $sql );
+
+		if ( ! empty( $count ) && is_numeric( $count ) ) {
+			return (int) $count;
+		}
+
+		return 0;
 	}
 
 	/**
@@ -666,8 +702,12 @@ class File {
 		$parts = AS3CF_Utils::parse_url( $url );
 		$path  = AS3CF_Utils::decode_filename_in_path( ltrim( $parts['path'], '/' ) );
 
+		// Each branch flags how it matched so the results can be ordered by
+		// confidence. The flag is an integer rather than a quoted label because
+		// a database using the ANSI_QUOTES SQL mode reads a double quoted token
+		// as an identifier, which would resolve the label as a column name.
 		$sql_bits[] = '
-			SELECT f.*, "A" AS match_order FROM ' . static::get_table_name() . ' AS f
+			SELECT f.*, 1 AS match_order FROM ' . static::get_table_name() . ' AS f
 			WHERE f.path = %s
 		';
 
@@ -680,7 +720,7 @@ class File {
 			$path_without_bucket = implode( '/', $path_parts );
 
 			$sql_bits[] = '
-				SELECT f.*, "B" AS match_order FROM ' . static::get_table_name() . ' AS f
+				SELECT f.*, 2 AS match_order FROM ' . static::get_table_name() . ' AS f
 				INNER JOIN ' . Item::get_table_name() . ' AS i ON f.item_id = i.id
 				WHERE f.path = %s
 				AND i.bucket = %s
@@ -720,7 +760,7 @@ class File {
 			// we don't care whether the prefix start parts are some or all of the
 			// path prefix segments.
 			$sql_bits[] = '
-				SELECT f.*, "C" AS match_order FROM ' . static::get_table_name() . ' AS f
+				SELECT f.*, 3 AS match_order FROM ' . static::get_table_name() . ' AS f
 				WHERE f.path = %s
 			';
 

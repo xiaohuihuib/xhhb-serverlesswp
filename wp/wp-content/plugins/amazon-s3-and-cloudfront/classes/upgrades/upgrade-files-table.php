@@ -12,6 +12,7 @@
 namespace DeliciousBrains\WP_Offload_Media\Upgrades;
 
 use AS3CF_Error;
+use DeliciousBrains\WP_Offload_Media\Items\File;
 use DeliciousBrains\WP_Offload_Media\Items\Item;
 
 /**
@@ -86,8 +87,10 @@ class Upgrade_Files_Table extends Upgrade {
 		}
 
 		Item::disable_cache();
+		File::disable_cache();
 		$as3cf_item = $class::get_by_id( $item->id );
 		Item::enable_cache();
+		File::enable_cache();
 
 		if ( ! $as3cf_item ) {
 			AS3CF_Error::log( 'Could not construct item with ID ' . $item->id . '.' );
@@ -100,7 +103,11 @@ class Upgrade_Files_Table extends Upgrade {
 		$as3cf_item->set_last_upgrade_routine( $this->upgrade_id );
 
 		// Saving the item will upgrade it to the latest schema version.
+		Item::disable_cache();
+		File::disable_cache();
 		$result = $as3cf_item->save();
+		Item::enable_cache();
+		File::enable_cache();
 
 		if ( is_wp_error( $result ) ) {
 			AS3CF_Error::log( 'Error saving item: ' . $result->get_error_message() );
