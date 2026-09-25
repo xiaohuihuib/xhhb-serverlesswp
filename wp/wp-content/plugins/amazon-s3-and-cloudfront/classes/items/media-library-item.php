@@ -337,14 +337,16 @@ class Media_Library_Item extends Item {
 	/**
 	 * Get the item based on source id.
 	 *
-	 * @param int $source_id
+	 * @param mixed $source_id
 	 *
 	 * @return Media_Library_Item|bool
 	 */
-	public static function get_by_source_id( int $source_id ): Media_Library_Item|bool {
+	public static function get_by_source_id( mixed $source_id ): Media_Library_Item|bool {
 		$as3cf_item = parent::get_by_source_id( $source_id );
 
-		if ( ! $as3cf_item ) {
+		// The legacy lookup reads post meta and applies two public filters,
+		// so it must not be handed a source id the parent already rejected.
+		if ( ! $as3cf_item && is_numeric( $source_id ) ) {
 			$provider_object = static::_legacy_get_attachment_provider_info( $source_id );
 
 			if ( is_array( $provider_object ) ) {

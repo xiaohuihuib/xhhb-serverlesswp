@@ -4,7 +4,7 @@ Tags: uploads, amazon, s3, amazon s3, digitalocean, digitalocean spaces, google 
 Requires at least: 5.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 3.4.2
+Stable tag: 3.4.3
 License: GPLv2
 
 Copies files to Amazon S3, DigitalOcean Spaces or Google Cloud Storage as they are uploaded to the Media Library. Optionally configure Amazon CloudFront or another CDN for faster delivery.
@@ -87,6 +87,15 @@ This is a major change, which ensures S3 URLs are no longer saved in post conten
 This version requires PHP 5.3.3+ and the Amazon Web Services plugin
 
 == Changelog ==
+
+= WP Offload Media Lite 3.4.3 - 2026-09-21 =
+* Bug fix: A non-numeric attachment ID passed to wp_get_attachment_image_src() by a theme or plugin no longer results in a fatal error
+* Bug fix: Attachment metadata carrying an image size entry without a filename no longer results in a fatal error
+* Bug fix: Uploading a file no longer loads the whole offloaded file list for the candidate uploads directory into memory
+* Bug fix: A text file uploaded with the same name as an existing one now properly gets a unique name when using the Remove Local Media option
+* Bug fix: Media Library items that have duplicate original_image metadata entries but not file paths are no longer offloaded as duplicates
+* Bug fix: Offload metadata objects added to an external cache no longer persist indefinitely
+* Bug fix: A database using the ANSI_QUOTES SQL mode no longer causes unknown column errors or missed provider to local URL rewrites
 
 = WP Offload Media Lite 3.4.2 - 2026-09-07 =
 * Bug fix: A null attachment ID passed to get_attached_file() by another plugin no longer results in a fatal error

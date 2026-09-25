@@ -2,14 +2,14 @@
 # # This file is distributed under the same license as the amazon-s3-and-cloudfront package.
 msgid ""
 msgstr ""
-"Project-Id-Version: amazon-s3-and-cloudfront 3.4.2\n"
+"Project-Id-Version: amazon-s3-and-cloudfront 3.4.3\n"
 "Report-Msgid-Bugs-To: mailto:nom@deliciousbrains.com\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T15:26:45+00:00\n"
+"POT-Creation-Date: 2026-09-21T08:23:30+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: amazon-s3-and-cloudfront\n"
@@ -1306,60 +1306,60 @@ msgid "Feedback"
 msgstr ""
 
 #. translators: %1$s is a version string, %2$s a different version string, %3$s is a documentation link.
-#: classes/as3cf-plugin-compatibility.php:1040
+#: classes/as3cf-plugin-compatibility.php:1046
 #, php-format
 msgid "<strong>Warning:</strong> This site is using PHP %1$s, in a future update WP Offload Media will require PHP %2$s or later. %3$s"
 msgstr ""
 
 #. translators: %d is an integer unique ID.
-#: classes/integrations/media-library.php:347
+#: classes/integrations/media-library.php:346
 #, php-format
 msgid "Can't create item from media library item %d"
 msgstr ""
 
-#: classes/integrations/media-library.php:711
+#: classes/integrations/media-library.php:739
 msgid "Offload"
 msgstr ""
 
-#: classes/integrations/media-library.php:1236
+#: classes/integrations/media-library.php:1266
 msgid "No"
 msgstr ""
 
-#: classes/integrations/media-library.php:1253
+#: classes/integrations/media-library.php:1283
 msgctxt "Storage provider key name"
 msgid "Storage Provider"
 msgstr ""
 
-#: classes/integrations/media-library.php:1254
+#: classes/integrations/media-library.php:1284
 msgctxt "Storage provider name"
 msgid "Storage Provider"
 msgstr ""
 
-#: classes/integrations/media-library.php:1255
+#: classes/integrations/media-library.php:1285
 msgctxt "Bucket name"
 msgid "Bucket"
 msgstr ""
 
-#: classes/integrations/media-library.php:1256
+#: classes/integrations/media-library.php:1286
 msgctxt "Path to file in bucket"
 msgid "Path"
 msgstr ""
 
-#: classes/integrations/media-library.php:1257
+#: classes/integrations/media-library.php:1287
 msgctxt "Location of bucket"
 msgid "Region"
 msgstr ""
 
-#: classes/integrations/media-library.php:1258
+#: classes/integrations/media-library.php:1288
 msgctxt "Access control list of the file in bucket"
 msgid "Access"
 msgstr ""
 
-#: classes/integrations/media-library.php:1259
+#: classes/integrations/media-library.php:1289
 msgid "URL"
 msgstr ""
 
-#: classes/integrations/media-library.php:1260
+#: classes/integrations/media-library.php:1290
 msgctxt "Whether or not metadata has been verified"
 msgid "Verified"
 msgstr ""
@@ -1421,7 +1421,7 @@ msgstr ""
 msgid "Media Library item with ID %d does not have a valid file path"
 msgstr ""
 
-#: classes/items/media-library-item.php:544
+#: classes/items/media-library-item.php:546
 msgid "Edit"
 msgstr ""
 
@@ -2195,7 +2195,7 @@ msgstr ""
 msgid "Fixed legacy amazonS3_info metadata when updating file size metadata, please check bucket and path for attachment ID %1$s"
 msgstr ""
 
-#: classes/upgrades/upgrade-files-table.php:47
+#: classes/upgrades/upgrade-files-table.php:48
 msgid "and updating the plugin's metadata to use a faster storage method."
 msgstr ""
 
