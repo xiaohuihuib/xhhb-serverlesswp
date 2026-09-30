@@ -227,11 +227,8 @@ class wfWAFRequest implements wfWAFRequestInterface {
 				parse_str($queryString, $queryStringArray);
 				$request->setQueryString($queryStringArray);
 
-				$path = wfWAFUtils::substr($uri, 0, $pos);
-				$request->setPath($path);
-			} else {
-				$request->setPath($uri);
 			}
+			$request->setPath(self::extractRequestPath($uri));
 		}
 		$kvHeaders = array();
 		for ($i = 1; $i < count($headers); $i++) {
@@ -486,16 +483,26 @@ class wfWAFRequest implements wfWAFRequestInterface {
 			$request->setProtocol((array_key_exists('HTTPS', $_SERVER) && $_SERVER['HTTPS'] && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http');
 			$request->setUri(array_key_exists('REQUEST_URI', $_SERVER) ? wfWAFUtils::stripMagicQuotes($_SERVER['REQUEST_URI']) : '');
 
-			$uri = parse_url($request->getURI());
-			if (is_array($uri) && array_key_exists('path', $uri)) {
-				$path = $uri['path'];
-			} else {
-				$path = $request->getURI();
-			}
-			$request->setPath($path);
+			$request->setPath(self::extractRequestPath($request->getURI()));
 		}
 
 		return $request;
+	}
+
+	/**
+	 * Extract a raw path without interpreting origin-form leading slashes as a host.
+	 * @param string $target HTTP request target.
+	 * @return string Raw path, excluding the query string.
+	 */
+	private static function extractRequestPath($target) {
+		if (preg_match('#^https?://#i', $target)) {
+			$parts = @parse_url($target);
+			if (is_array($parts)) {
+				return isset($parts['path']) ? $parts['path'] : '/';
+			}
+		}
+		$pos = wfWAFUtils::strpos($target, '?');
+		return $pos === false ? $target : wfWAFUtils::substr($target, 0, $pos);
 	}
 
 	private $auth;

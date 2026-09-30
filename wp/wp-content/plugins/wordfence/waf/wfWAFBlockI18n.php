@@ -28,45 +28,58 @@ class wfWAFBlockI18n implements wfWAFBlockConstants {
 		return call_user_func_array(array(get_called_class(), 'formatBlockDescription'), $args);
 	}
 	
+	/**
+	 * Translate without WordPress, tolerating an older parent site's WAF.
+	 * @param string $text Original message.
+	 * @param string $domain Text domain retained for translation extraction.
+	 * @return string Translated message, or the original when WAF translation is unavailable.
+	 */
+	private static function __($text, $domain) {
+		if (class_exists('wfWAFI18n') && method_exists('wfWAFI18n', '__')) {
+			return wfWAFI18n::__($text);
+		}
+		return $text;
+	}
+
 	protected static function getBlockFormatString($key) {
 		switch ($key) {
 			case self::WFWAF_BLOCK_UAREFIPRANGE:
-				return __('UA/Referrer/IP Range not allowed', 'wordfence');
+				return self::__('UA/Referrer/IP Range not allowed', 'wordfence');
 			case self::WFWAF_BLOCK_COUNTRY:
-				return __('blocked access via country blocking', 'wordfence');
+				return self::__('blocked access via country blocking', 'wordfence');
 			case self::WFWAF_BLOCK_COUNTRY_REDIR:
-				return /* translators: URL */ __('blocked access via country blocking and redirected to URL (%s)', 'wordfence');
+				return /* translators: URL */ self::__('blocked access via country blocking and redirected to URL (%s)', 'wordfence');
 			case self::WFWAF_BLOCK_COUNTRY_BYPASS_REDIR:
-				return __('redirected to bypass URL', 'wordfence');
+				return self::__('redirected to bypass URL', 'wordfence');
 			case self::WFWAF_BLOCK_WFSN:
-				return __('Blocked by Wordfence Security Network', 'wordfence');
+				return self::__('Blocked by Wordfence Security Network', 'wordfence');
 			case self::WFWAF_BLOCK_BADPOST:
-				return __('POST received with blank user-agent and referer', 'wordfence');
+				return self::__('POST received with blank user-agent and referer', 'wordfence');
 			case self::WFWAF_BLOCK_BANNEDURL:
-				return __('Accessed a banned URL', 'wordfence');
+				return self::__('Accessed a banned URL', 'wordfence');
 			case self::WFWAF_BLOCK_INVALIDUSERNAME:
 				/* translators: WordPress username. */
-				return __("Used an invalid username '%s' to try to sign in", 'wordfence');
+				return self::__("Used an invalid username '%s' to try to sign in", 'wordfence');
 			case self::WFWAF_BLOCK_LOGINSEC:
-				return __('Blocked by login security setting', 'wordfence');
+				return self::__('Blocked by login security setting', 'wordfence');
 			case self::WFWAF_BLOCK_LOGINSEC_FORGOTPASSWD:
 				/* translators: 1. Password reset limit (number). 2. WordPress username. */
-				return __('Exceeded the maximum number of tries to recover their password which is set at: %1$s. The last username or email they entered before getting locked out was: \'%2$s\'', 'wordfence');
+				return self::__('Exceeded the maximum number of tries to recover their password which is set at: %1$s. The last username or email they entered before getting locked out was: \'%2$s\'', 'wordfence');
 			case self::WFWAF_BLOCK_LOGINSEC_FAILURES:
 				/* translators: 1. Login attempt limit. 2. WordPress username. */
-				return __('Exceeded the maximum number of login failures which is: %1$s. The last username they tried to sign in with was: \'%2$s\'', 'wordfence');
+				return self::__('Exceeded the maximum number of login failures which is: %1$s. The last username they tried to sign in with was: \'%2$s\'', 'wordfence');
 			case self::WFWAF_BLOCK_MANUAL:
-				return __('Manual block by administrator', 'wordfence');
+				return self::__('Manual block by administrator', 'wordfence');
 			case self::WFWAF_BLOCK_THROTTLEGLOBAL:
-				return __('Exceeded the maximum global requests per minute for crawlers or humans.', 'wordfence');
+				return self::__('Exceeded the maximum global requests per minute for crawlers or humans.', 'wordfence');
 			case self::WFWAF_BLOCK_THROTTLECRAWLER:
-				return __('Exceeded the maximum number of requests per minute for crawlers.', 'wordfence');
+				return self::__('Exceeded the maximum number of requests per minute for crawlers.', 'wordfence');
 			case self::WFWAF_BLOCK_THROTTLECRAWLERNOTFOUND:
-				return __('Exceeded the maximum number of page not found errors per minute for a crawler.', 'wordfence');
+				return self::__('Exceeded the maximum number of page not found errors per minute for a crawler.', 'wordfence');
 			case self::WFWAF_BLOCK_THROTTLEHUMAN:
-				return __('Exceeded the maximum number of page requests per minute for humans.', 'wordfence');
+				return self::__('Exceeded the maximum number of page requests per minute for humans.', 'wordfence');
 			case self::WFWAF_BLOCK_THROTTLEHUMANNOTFOUND:
-				return __('Exceeded the maximum number of page not found errors per minute for humans.', 'wordfence');
+				return self::__('Exceeded the maximum number of page not found errors per minute for humans.', 'wordfence');
 			default:
 				return null;
 		}

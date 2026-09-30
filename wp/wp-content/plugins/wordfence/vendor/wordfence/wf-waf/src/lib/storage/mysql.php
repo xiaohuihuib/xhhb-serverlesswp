@@ -324,7 +324,8 @@ class wfWAFStorageMySQL implements wfWAFStorageInterface {
 
 		if (array_key_exists($category, $this->data) && array_key_exists($key, $this->data[$category])) {
 			if (!isset($this->serializedStatus[$key]) && in_array($key, $this->getSerializedParams())) { //Value is still serialized from the autoload, finish deserializing
-				$value = @unserialize($this->data[$category][$key]);
+				// Missing autoloaded values are null; preserve the historical false result.
+				$value = $this->data[$category][$key] === null ? false : unserialize($this->data[$category][$key]);
 				$this->data[$category][$key] = $value;
 				$this->serializedStatus[$key] = true;
 			}
@@ -337,7 +338,7 @@ class wfWAFStorageMySQL implements wfWAFStorageInterface {
 		));
 		if ($val !== null) {
 			if (in_array($key, $this->getSerializedParams())) {
-				$value = @unserialize($val);
+				$value = unserialize($val);
 				$this->data[$category][$key] = $value;
 				$this->serializedStatus[$key] = true;
 				return $value;

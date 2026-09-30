@@ -4,7 +4,7 @@ Tags: security, malware, 2fa, firewall, scanner
 Requires at least: 4.7
 Requires PHP: 7.0
 Tested up to: 7.1
-Stable tag: 9.0.1
+Stable tag: 9.0.2
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -207,6 +207,22 @@ Secure your website with Wordfence.
 9. Logging in is easy with Wordfence 2FA.
 
 == Changelog ==
+
+= 9.0.2 - September 30, 2026 =
+* Change: Changed IPv6 diagnostics result to be informational only
+* Change: Added help link to increased attack rate emails
+* Improvement: Increased compatibility with WordPress Playground
+* Improvement: Harden REST API user enumeration protection
+* Fix: Upgraded virtualizer dependency to fix Firefox tab crash on screens with a lot of DOM elements (e.g., a running scan)
+* Fix: Better detection and handling of "module" script tagging to avoid conflict with renamed plugin directories
+* Fix: Add missed return value from `upgrader_pre_install` audit log filter
+* Fix: PHP 8.1 deprecation notice fixes
+* Fix: Fixed translation support on login page
+* Fix: Improve handling of WAF JSON processing to better handle array values
+* Fix: Address early translation calls to avoid `_load_textdomain_just_in_time` notices
+* Fix: Changed a few translated strings to avoid containing HTML due to a broken CZ translation
+* Fix: Removed obsolete CSS
+* Fix: Fixed typo in "No alerts will be sent for the remain[d]er..."
 
 = 9.0.1 - September 8, 2026 =
 * Improvement: UX enhancements for passkey authentication and general login security

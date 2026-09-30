@@ -131,7 +131,7 @@ class wfDiagnostic
 				'tests' => array(
 					'connectToServer2' => __('Connecting to Wordfence servers (https)', 'wordfence'),
 					'connectToSelf' => __('Connecting back to this site', 'wordfence'),
-					'connectToSelfIpv6' => array('raw' => true, 'value' => wp_kses(sprintf(/* translators: Support URL */ __('Connecting back to this site via IPv6 (Not required; this may not be an issue on some sites. <a href="%s" target="_blank" rel="noopener noreferrer" class="wfhelp"><span class="wfhelpextra">Click here to learn whether this is an issue</span></a>)', 'wordfence'), wfSupportController::esc_supportURL(wfSupportController::ITEM_DIAGNOSTICS_IPV6)), array('a'=>array('href'=>array(), 'target'=>array(), 'rel'=>array(), 'class'=>array()), 'span'=>array('class'=>array())))),
+					'connectToSelfIpv6' => array('raw' => true, 'value' => wp_kses(sprintf(/* translators: Support URL */ __('Connecting back to this site via IPv6 (Not required; if your scans run completely, IPv6 connectivity is not an issue. <a href="%s" target="_blank" rel="noopener noreferrer" class="wfhelp"><span class="wfhelpextra">Click here to learn whether this is an issue</span></a>)', 'wordfence'), wfSupportController::esc_supportURL(wfSupportController::ITEM_DIAGNOSTICS_IPV6)), array('a'=>array('href'=>array(), 'target'=>array(), 'rel'=>array(), 'class'=>array()), 'span'=>array('class'=>array())))),
 					'serverIP' => __('IP(s) used by this server', 'wordfence'),
 				)
 			),
@@ -883,26 +883,29 @@ class wfDiagnostic
 						
 						return array(
 							'test' => false,
-							'warn' => true,
 							'infoOnly' => true,
 							'message' => __('IPv6 DNS resolution failed', 'wordfence'),
 							'detail' => array('escaped' => $detail, 'textonly' => $detailTextOnly),
 						);
 					}
 				}
+				if (is_bool($result)) {
+					$result = array('test' => $result, 'message' => $result ? 'OK' : 'FAIL');
+				}
+				$result['infoOnly'] = true;
 				return $result;
 			}
 			catch (wfCurlInterceptionFailedException $e) {
 				return array(
 					'test' => false,
-					'warn' => true,
+					'infoOnly' => true,
 					'message' => __('This diagnostic is unavailable as cURL appears to be supported, but was not used by WordPress for this request', 'wordfence')
 				);
 			}
 		}
 		return array(
 			'test' => false,
-			'warn' => true,
+			'infoOnly' => true,
 			'message' => __('This diagnostic requires cURL', 'wordfence')
 		);
 	}
