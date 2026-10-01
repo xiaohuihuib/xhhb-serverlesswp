@@ -500,7 +500,7 @@ class wfConfig {
 		if (is_array($val)) {
 			$msg = sprintf(
 				/* translators: 1. Key in key-value store. 2. Value in key-value store. */
-				__('wfConfig::set() got an array as second param with key: %1$s and value: %2$s', 'wordfence'), $key, var_export($val, true));
+				wfI18n::__('wfConfig::set() got an array as second param with key: %1$s and value: %2$s', 'wordfence'), $key, var_export($val, true));
 			wordfence::status(1, 'error', $msg);
 			return;
 		}
@@ -732,7 +732,7 @@ class wfConfig {
 				$chunk = self::getDB()->querySingle("select val from " . self::table() . " where name=%s", $chunkedValueKey . $i);
 				self::getDB()->flush(); //clear cache
 				if (!$chunk) {
-					wordfence::status(2, 'error', sprintf(/* translators: Key in key-value store. */ __("Error reassembling value for %s", 'wordfence'), $key));
+					wordfence::status(2, 'error', sprintf(/* translators: Key in key-value store. */ wfI18n::__("Error reassembling value for %s", 'wordfence'), $key));
 					return $default;
 				}
 				fwrite($fh, $chunk);
@@ -828,7 +828,7 @@ class wfConfig {
 					if ($stmt === false) {
 						wordfence::status(2, 'error', sprintf(
 						/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-							__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+							wfI18n::__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 						return false;
 					}
 					$null = NULL;
@@ -837,14 +837,14 @@ class wfConfig {
 					if (!$stmt->send_long_data(1, $dataChunk)) {
 						wordfence::status(2, 'error', sprintf(
 						/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-							__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+							wfI18n::__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 						return false;
 					}
 					
 					if (!$stmt->execute()) {
 						wordfence::status(2, 'error', sprintf(
 						/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-							__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+							wfI18n::__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 						return false;
 					}
 				}
@@ -854,14 +854,14 @@ class wfConfig {
 							$errno = mysqli_errno($wpdb->dbh);
 							wordfence::status(2, 'error', sprintf(
 							/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-								__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $errno, $wpdb->last_error));
+								wfI18n::__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $errno, $wpdb->last_error));
 						}
 						else if (function_exists('mysql_errno')) {
 							// phpcs:ignore PHPCompatibility.Extensions.RemovedExtensions.mysql_DeprecatedRemoved
 							$errno = mysql_errno($wpdb->dbh);
 							wordfence::status(2, 'error', sprintf(
 							/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-								__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $errno, $wpdb->last_error));
+								wfI18n::__('Error writing value chunk for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $errno, $wpdb->last_error));
 						}
 						
 						return false;
@@ -873,7 +873,7 @@ class wfConfig {
 			if (!self::getDB()->queryWrite(sprintf("insert ignore into " . self::table() . " (name, val, autoload) values (%%s, X'%s', 'no')", bin2hex(serialize(array('count' => $chunks)))), $chunkedValueKey . 'header')) {
 				wordfence::status(2, 'error', sprintf(
 				/* translators: Key in key-value store. */
-					__("Error writing value header for %s", 'wordfence'), $key));
+					wfI18n::__("Error writing value header for %s", 'wordfence'), $key));
 				return false;
 			}
 		}
@@ -886,7 +886,7 @@ class wfConfig {
 					if ($stmt === false) {
 						wordfence::status(2, 'error', sprintf(
 						/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-							__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+							wfI18n::__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 						return false;
 					}
 					$null = NULL;
@@ -897,7 +897,7 @@ class wfConfig {
 					if ($stmt === false) {
 						wordfence::status(2, 'error', sprintf(
 						/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-							__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+							wfI18n::__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 						return false;
 					}
 					$null = NULL;
@@ -907,14 +907,14 @@ class wfConfig {
 				if (!$stmt->send_long_data(0, $data)) {
 					wordfence::status(2, 'error', sprintf(
 					/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-						__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+						wfI18n::__('Error writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 					return false;
 				}
 				
 				if (!$stmt->execute()) {
 					wordfence::status(2, 'error', sprintf(
 					/* translators: 1. Key in key-value store. 2. MySQL error number. 3. MySQL error message. */
-					__('Error finishing writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
+					wfI18n::__('Error finishing writing value for %1$s (MySQLi error: [%2$s] %3$s)', 'wordfence'), $key, $dbh->errno, $dbh->error));
 					return false;
 				}
 			}
@@ -1503,10 +1503,10 @@ Options -ExecCGI
 				{
 					$value = trim($value);
 					if (empty($value)) {
-						$errors[] = array('option' => $key, 'error' => __('An empty license key was entered.', 'wordfence'));
+						$errors[] = array('option' => $key, 'error' => wfI18n::__('An empty license key was entered.', 'wordfence'));
 					}
 					else if ($value && !preg_match('/^[a-fA-F0-9]+$/', $value)) {
-						$errors[] = array('option' => $key, 'error' => __('The license key entered is not in a valid format. It must contain only numbers and the letters A-F.', 'wordfence'));
+						$errors[] = array('option' => $key, 'error' => wfI18n::__('The license key entered is not in a valid format. It must contain only numbers and the letters A-F.', 'wordfence'));
 					}
 					
 					$checked = true;
@@ -2125,11 +2125,11 @@ Options -ExecCGI
 						wfConfig::set('touppPromptNeeded', true);
 					}
 					else {
-						throw new Exception(__("The Wordfence server's response did not contain the expected elements.", 'wordfence'));
+						throw new Exception(wfI18n::__("The Wordfence server's response did not contain the expected elements.", 'wordfence'));
 					}
 				}
 				catch (Exception $e) {
-					throw new wfConfigException(__('Your options have been saved, but you left your license key blank, so we tried to get you a free license key from the Wordfence servers. There was a problem fetching the free key: ', 'wordfence') . wp_kses($e->getMessage(), array()));
+					throw new wfConfigException(wfI18n::__('Your options have been saved, but you left your license key blank, so we tried to get you a free license key from the Wordfence servers. There was a problem fetching the free key: ', 'wordfence') . wp_kses($e->getMessage(), array()));
 				}
 			}
 			else if ($existingAPIKey != $apiKey) { //Key changed, try activating
@@ -2147,11 +2147,11 @@ Options -ExecCGI
 						$ping = true;
 					}
 					else {
-						throw new Exception(__("The Wordfence server's response did not contain the expected elements.", 'wordfence'));
+						throw new Exception(wfI18n::__("The Wordfence server's response did not contain the expected elements.", 'wordfence'));
 					}
 				}
 				catch (Exception $e) {
-					throw new wfConfigException(__('Your options have been saved. However we noticed you changed your license key, and we tried to verify it with the Wordfence servers but received an error: ', 'wordfence') . wp_kses($e->getMessage(), array()));
+					throw new wfConfigException(wfI18n::__('Your options have been saved. However we noticed you changed your license key, and we tried to verify it with the Wordfence servers but received an error: ', 'wordfence') . wp_kses($e->getMessage(), array()));
 				}
 			}
 			else { //Key unchanged, just ping it
@@ -2199,7 +2199,7 @@ Options -ExecCGI
 					wfConfig::set('keyType', $keyType);
 				}
 				catch (Exception $e){
-					throw new wfConfigException(__('Your options have been saved. However we tried to verify your license key with the Wordfence servers and received an error: ', 'wordfence') . wp_kses($e->getMessage(), array()));
+					throw new wfConfigException(wfI18n::__('Your options have been saved. However we tried to verify your license key with the Wordfence servers and received an error: ', 'wordfence') . wp_kses($e->getMessage(), array()));
 				}
 			}
 		}

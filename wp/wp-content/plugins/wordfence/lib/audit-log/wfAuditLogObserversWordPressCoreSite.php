@@ -374,6 +374,8 @@ abstract class wfAuditLogObserversWordPressCoreSite extends wfAuditLog {
 			if (!$auditLog->_hasState('upgrader_pre_install.versions', 0)) {
 				$auditLog->_trackState('upgrader_pre_install.versions', $auditLog->_installedVersions(), 0);
 			}
+
+			return $response;
 		}, 'filter');
 		
 		$auditLog->_addObserver('upgrader_post_install', function($response, $hook_extra, $result) use ($auditLog) { //Plugin/theme installed/updated

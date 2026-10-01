@@ -4052,16 +4052,16 @@ class wfUtils {
 	}
 	
 	/**
-	 * Returns whether or not MySQLi should be used directly when needed. Returns true if there's a valid DB handle,
+	 * Returns whether or not MySQLi should be used directly when needed. Returns true if there's a MySQLi DB handle,
 	 * our database test succeeded, our constant is not set to prevent it, and then either $wpdb indicates it's using
-	 * mysqli (older WordPress versions) or we're on PHP 7+ (only mysqli is ever used).
+	 * mysqli (older WordPress versions) or we're on PHP 7+.
 	 * 
 	 * @return bool
 	 */
 	public static function useMySQLi() {
 		global $wpdb;
 		$dbh = $wpdb->dbh;
-		$useMySQLi = (is_object($dbh) && (PHP_MAJOR_VERSION >= 7 || $wpdb->use_mysqli) && wfConfig::get('allowMySQLi', true) && WORDFENCE_ALLOW_DIRECT_MYSQLI);
+		$useMySQLi = (is_object($dbh) && $dbh instanceof mysqli && (PHP_MAJOR_VERSION >= 7 || $wpdb->use_mysqli) && wfConfig::get('allowMySQLi', true) && WORDFENCE_ALLOW_DIRECT_MYSQLI);
 		return $useMySQLi;
 	}
 }
