@@ -52,6 +52,10 @@ class wfAuditLog {
 	const AUDIT_LOG_CATEGORY_FIREWALL = 'firewall';
 	
 	const AUDIT_LOG_MAX_SAMPLES = 20; //Max number of requests to store in the local summary, each of which may have one or more events
+	const AUDIT_LOG_REQUEST_BODY_MAX_NON_PRIORITY_PARAMETER_KEYS = 100;
+	const AUDIT_LOG_REQUEST_BODY_MAX_KEY_BYTES = 128;
+	const AUDIT_LOG_REQUEST_BODY_KEY_HASH_LENGTH = 12;
+	const AUDIT_LOG_REQUEST_BODY_JSON_DEPTH = 16;
 	
 	const AUDIT_LOG_HEARTBEAT = 'heartbeat'; //A unique event that is sent to signal the audit log is functioning even if no other events have triggered, not displayed on the front end
 	
@@ -1093,7 +1097,7 @@ class wfAuditLog {
 		switch ($contentType) {
 			case 'application/json':
 				try {
-					$raw = json_decode($input, true, 512, JSON_OBJECT_AS_ARRAY);
+					$raw = json_decode($input, true, self::AUDIT_LOG_REQUEST_BODY_JSON_DEPTH, JSON_OBJECT_AS_ARRAY);
 					$response['type'] = 'json';
 				}
 				catch (Exception $e) {
@@ -1114,27 +1118,139 @@ class wfAuditLog {
 				break;
 			default: //Typically application/x-www-form-urlencoded
 				if ($input) {
-					parse_str($input, $raw);
+					// Encode literal NULs in the parsing copy so later parameters are retained.
+					parse_str(str_replace("\0", '%00', $input), $raw);
 					$response['type'] = 'urlencoded';
 				}
 				break;
 		}
 		
-		if (!empty($raw)) {
-			foreach ($raw as $k => $v) {
-				$response['parameters'][$k] = null;
-				if ($k == 'action' || //Used in admin-ajax and many other WP calls, typically relevant for auditing and not sensitive
-					$k == 'id' || //Typically the record ID being affected
-					$k == 'log' //Authentication username
-				) {
-					$response['parameters'][$k] = $v;
-				}
-				// else if -- future full value captures go here, otherwise we just capture the parameter name for privacy reasons
-			}
+		if (is_array($raw) && !empty($raw)) {
+			$response['parameters'] = self::_sanitizeRequestBodyParameters($raw);
+		}
+		$response['files'] = self::_sanitizeRequestBodyNode($response['files'], self::AUDIT_LOG_REQUEST_BODY_MAX_KEY_BYTES);
+		if (!empty($response['parameters']) || !empty($response['files'])) {
 			return $response;
 		}
 		
 		return null;
+	}
+
+	/**
+	 * Limits captured request parameters while preserving values for keys relevant to audit events.
+	 *
+	 * @param array $parameters
+	 * @return array
+	 */
+	private static function _sanitizeRequestBodyParameters($parameters) {
+		$priorityKeys = array(
+			'action', //Used in admin-ajax and many other WP calls, typically relevant for auditing and not sensitive
+			'id', //Typically the record ID being affected
+			'log', //Authentication username
+		);
+		$priorityMap = array_fill_keys($priorityKeys, true);
+		$sanitized = array();
+		$usedKeys = array();
+		$nonPriorityCount = 0;
+
+		foreach ($priorityKeys as $priorityKey) {
+			if (array_key_exists($priorityKey, $parameters)) {
+				$usedKeys[$priorityKey] = true;
+			}
+		}
+
+		foreach ($parameters as $key => $value) {
+			$key = (string) $key;
+			$isPriority = isset($priorityMap[$key]);
+			if (!$isPriority && $nonPriorityCount >= self::AUDIT_LOG_REQUEST_BODY_MAX_NON_PRIORITY_PARAMETER_KEYS) {
+				continue;
+			}
+
+			if ($isPriority) {
+				$sanitized[$key] = self::_sanitizeRequestBodyNode($value, self::AUDIT_LOG_REQUEST_BODY_MAX_KEY_BYTES);
+				continue;
+			}
+
+			$sanitizedKey = self::_uniqueRequestBodyKey($key, self::AUDIT_LOG_REQUEST_BODY_MAX_KEY_BYTES, $usedKeys);
+			$sanitized[$sanitizedKey] = null;
+			$nonPriorityCount++;
+			// Future full value captures can be added here; other values remain omitted for privacy.
+		}
+
+		return $sanitized;
+	}
+
+	/**
+	 * Recursively limits associative-array keys while preserving list indexes and values.
+	 *
+	 * @param mixed $node
+	 * @param int $maxKeyBytes
+	 * @return mixed
+	 */
+	private static function _sanitizeRequestBodyNode($node, $maxKeyBytes) {
+		if (!is_array($node)) {
+			return $node;
+		}
+
+		if (!wfUtils::is_assoc($node)) {
+			$sanitized = array();
+			foreach ($node as $value) {
+				$sanitized[] = self::_sanitizeRequestBodyNode($value, $maxKeyBytes);
+			}
+			return $sanitized;
+		}
+
+		$sanitized = array();
+		$usedKeys = array();
+		foreach ($node as $key => $value) {
+			$sanitizedKey = self::_uniqueRequestBodyKey((string) $key, $maxKeyBytes, $usedKeys);
+			$sanitized[$sanitizedKey] = self::_sanitizeRequestBodyNode($value, $maxKeyBytes);
+		}
+		return $sanitized;
+	}
+
+	/**
+	 * Produces a unique key that does not exceed the requested byte length.
+	 *
+	 * @param string $key
+	 * @param int $maxBytes
+	 * @param array $usedKeys
+	 * @return string
+	 */
+	private static function _uniqueRequestBodyKey($key, $maxBytes, &$usedKeys) {
+		$attempt = 0;
+		do {
+			$salt = $attempt === 0 ? null : (string) $attempt;
+			$candidate = self::_truncateRequestBodyKey($key, $maxBytes, $salt);
+			$attempt++;
+		} while (isset($usedKeys[$candidate]));
+
+		$usedKeys[$candidate] = true;
+		return $candidate;
+	}
+
+	/**
+	 * Truncates a key without splitting UTF-8 characters and adds a collision-resistant suffix.
+	 *
+	 * @param string $key
+	 * @param int $maxBytes
+	 * @param string|null $salt
+	 * @return string
+	 */
+	private static function _truncateRequestBodyKey($key, $maxBytes, $salt = null) {
+		if ($salt === null && wfUtils::strlen($key) <= $maxBytes) {
+			return $key;
+		}
+
+		$hashSource = $salt === null ? $key : $key . ':' . $salt;
+		$suffix = '~' . wfUtils::substr(hash('sha256', $hashSource), 0, self::AUDIT_LOG_REQUEST_BODY_KEY_HASH_LENGTH);
+		$prefixLength = $maxBytes - wfUtils::strlen($suffix);
+		$prefix = wfUtils::substr($key, 0, $prefixLength);
+		while ($prefix !== '' && @preg_match('//u', $prefix) !== 1) {
+			$prefix = wfUtils::substr($prefix, 0, wfUtils::strlen($prefix) - 1);
+		}
+
+		return $prefix . $suffix;
 	}
 	
 	/**

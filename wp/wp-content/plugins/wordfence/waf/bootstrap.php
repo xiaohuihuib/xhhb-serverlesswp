@@ -6,6 +6,13 @@
 
 if (!defined('WFWAF_RUN_COMPLETE')) {
 
+require_once dirname(__FILE__) . '/../vendor/wordfence/wf-waf/src/lib/health.php';
+wfWAFRuntimeHealth::begin(realpath(dirname(__DIR__)), defined('WFWAF_LOG_PATH') ? WFWAF_LOG_PATH : (defined('WP_CONTENT_DIR') ? WP_CONTENT_DIR . '/wflogs/' : null));
+
+// Keep WAF diagnostics out of the response while preserving the site's logging settings.
+$wfWAFBootstrapDisplayErrors = function_exists('ini_set') ? @ini_set('display_errors', '0') : false;
+try {
+
 if (!defined('WFWAF_AUTO_PREPEND')) {
 	define('WFWAF_AUTO_PREPEND', true);
 }
@@ -62,6 +69,9 @@ class wfWAFWordPressRequest extends wfWAFRequest {
 		}
 		$ips = array();
 		$howGet = wfWAF::getInstance()->getStorageEngine()->getConfig('howGetIPs', null, 'synced');
+		if ($howGet !== null && !is_string($howGet)) {
+			throw new InvalidArgumentException('Invalid client IP configuration');
+		}
 		if ($howGet) {
 			if (is_string($howGet) && is_array($_SERVER) && array_key_exists($howGet, $_SERVER)) {
 				$ips[] = array($_SERVER[$howGet], $howGet);
@@ -73,6 +83,9 @@ class wfWAFWordPressRequest extends wfWAFRequest {
 		}
 		else {
 			$recommendedField = wfWAF::getInstance()->getStorageEngine()->getConfig('detectProxyRecommendation', null, 'synced');
+			if ($recommendedField !== null && !is_string($recommendedField)) {
+				throw new InvalidArgumentException('Invalid client IP recommendation');
+			}
 			if (!empty($recommendedField) && $recommendedField != 'UNKNOWN' && $recommendedField != 'DEFERRED') {
 				if (isset($_SERVER[$recommendedField])) {
 					$ips[] = array($_SERVER[$recommendedField], $recommendedField);
@@ -138,7 +151,7 @@ class wfWAFWordPressRequest extends wfWAFRequest {
 					$sp = explode($char, $item);
 					$sp = array_reverse($sp);
 					foreach ($sp as $index => $j) {
-						$j = trim($j);
+						$j = trim($j, " \t\n\r\0\x0B\x0C");
 						if (!$this->_isValidIP($j)) {
 							$j = preg_replace('/:\d+$/', '', $j); //Strip off port
 						}
@@ -238,13 +251,63 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
 		$this->waf=$waf;
 	}
 
+	/**
+	 * Run independent optional checks without swallowing WAF decisions.
+	 *
+	 * @return void
+	 */
 	public function beforeRunRules() {
+		$this->runProtectionStage('url-allowlist', 'checkAllowedURLs');
+		$this->runProtectionStage('ip-allowlist', 'checkAllowedIPs');
+		$this->runProtectionStage('plugin-blocks', 'checkPluginBlocks');
+	}
+
+	/**
+	 * Isolate a feature while preserving allow/block control flow.
+	 *
+	 * @param string $component Component.
+	 * @param string $method Local check.
+	 * @return void
+	 */
+	private function runProtectionStage($component, $method) {
+		try {
+			if ($this->$method() !== false) {
+				wfWAFRuntimeHealth::complete($component);
+			}
+		}
+		catch (wfWAFRunException $e) {
+			throw $e;
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure($component, 'check-failed', $e);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure($component, 'check-failed', $e);
+		}
+	}
+
+	/**
+	 * Evaluate valid user URL allowlist entries.
+	 *
+	 * @return void
+	 */
+	private function checkAllowedURLs() {
 		// Whitelisted URLs (in WAF config)
 		$whitelistedURLs = wfWAF::getInstance()->getStorageEngine()->getConfig('whitelistedURLs', null, 'livewaf');
 		if ($whitelistedURLs) {
+			if (!is_array($whitelistedURLs)) {
+				throw new InvalidArgumentException('Invalid URL allowlist');
+			}
 			$whitelistPattern = "";
 			foreach ($whitelistedURLs as $whitelistedURL) {
+				if (!is_string($whitelistedURL)) {
+					wfWAFRuntimeHealth::failure('url-allowlist', 'invalid-entry');
+					continue;
+				}
 				$whitelistPattern .= preg_replace('/\\\\\*/', '.*?', preg_quote($whitelistedURL, '/')) . '|';
+			}
+			if ($whitelistPattern === '') {
+				return;
 			}
 			$whitelistPattern = '/^(?:' . wfWAFUtils::substr($whitelistPattern, 0, -1) . ')$/i';
 
@@ -257,13 +320,28 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
 			)->evaluate();
 		}
 
+	}
+
+	/**
+	 * Evaluate valid user IP allowlist entries.
+	 *
+	 * @return void
+	 */
+	private function checkAllowedIPs() {
 		// Whitelisted IPs (Wordfence config)
 		$whitelistedIPs = wfWAF::getInstance()->getStorageEngine()->getConfig('whitelistedIPs', null, 'synced');
 		if ($whitelistedIPs) {
 			if (!is_array($whitelistedIPs)) {
+				if (!is_string($whitelistedIPs)) {
+					throw new InvalidArgumentException('Invalid IP allowlist');
+				}
 				$whitelistedIPs = explode(',', $whitelistedIPs);
 			}
 			foreach ($whitelistedIPs as $whitelistedIP) {
+				if (!is_string($whitelistedIP)) {
+					wfWAFRuntimeHealth::failure('ip-allowlist', 'invalid-entry');
+					continue;
+				}
 				$ipRange = new wfWAFUserIPRange($whitelistedIP);
 				if ($ipRange->isIPInRange(wfWAF::getInstance()->getRequest()->getIP())) {
 					throw new wfWAFAllowException('Wordfence allowlisted IP.');
@@ -271,25 +349,65 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
 			}
 		}
 		
+	}
+
+	/**
+	 * Capture a validated plugin blocking decision for use after rules.
+	 *
+	 * @return void
+	 */
+	private function checkPluginBlocks() {
 		// Check plugin blocking
-		if ($result = wfWAF::getInstance()->willPerformFinalAction(wfWAF::getInstance()->getRequest())) {
-			if ($result === true) { $result = 'Not available'; } // Should not happen but can if the reason in the blocks table is empty
+		if ($result = wfWAFWordPress::normalizeFinalAction(wfWAF::getInstance()->willPerformFinalAction(wfWAF::getInstance()->getRequest()))) {
 			wfWAF::getInstance()->getRequest()->setMetadata(array_merge(wfWAF::getInstance()->getRequest()->getMetadata(), array('finalAction' => $result)));
 		}
 	}
 	
+	/**
+	 * Preserve pending plugin decisions even when blocklist work fails.
+	 *
+	 * @return void
+	 */
 	public function afterRunRules()
 	{
+		$this->runProtectionStage('blocklist', 'checkBlocklist');
+		$reason = wfWAFWordPress::normalizeFinalAction(wfWAF::getInstance()->getRequest()->getMetadata('finalAction'));
+		if ($reason) {
+			$e = new wfWAFBlockException($reason['action']);
+			$e->setRequest(wfWAF::getInstance()->getRequest());
+			throw $e;
+		}
+	}
+
+	/**
+	 * Evaluate the optional real-time IP blocklist.
+	 *
+	 * @return bool Whether local blocklist health may recover.
+	 */
+	private function checkBlocklist() {
+		$lookupSucceeded = false;
 		//Blacklist
 		if (!wfWAF::getInstance()->getStorageEngine()->getConfig('disableWAFBlacklistBlocking')) {
 			$blockedPrefixes = wfWAF::getInstance()->getStorageEngine()->getConfig('blockedPrefixes', null, 'transient');
-			if ($blockedPrefixes && wfWAF::getInstance()->getStorageEngine()->getConfig('isPaid', null, 'synced')) {
-				$blockedPrefixes = base64_decode($blockedPrefixes);
+			if (is_string($blockedPrefixes) && $blockedPrefixes !== '' && wfWAF::getInstance()->getStorageEngine()->getConfig('isPaid', null, 'synced')) {
+				$blockedPrefixes = base64_decode($blockedPrefixes, true);
 				if ($this->_prefixListContainsIP($blockedPrefixes, wfWAF::getInstance()->getRequest()->getIP()) !== false) {
 					$allowedCacheJSON = wfWAF::getInstance()->getStorageEngine()->getConfig('blacklistAllowedCache', '', 'transient');
-					$allowedCache = @json_decode($allowedCacheJSON, true);
+					if (!is_string($allowedCacheJSON)) {
+						throw new InvalidArgumentException('Invalid blocklist cache');
+					}
+					$allowedCache = json_decode($allowedCacheJSON, true);
+					$validCache = is_array($allowedCache) || $allowedCacheJSON === '';
 					if (!is_array($allowedCache)) {
+						if ($allowedCacheJSON !== '') {
+							wfWAFRuntimeHealth::failure('blocklist-cache', 'invalid-cache', null, false);
+						}
 						$allowedCache = array();
+					}
+
+					$cacheIssues = wfWAFRuntimeHealth::snapshot()['issues'];
+					if ($validCache && (!isset($cacheIssues['blocklist-cache']) || $cacheIssues['blocklist-cache']['code'] === 'invalid-cache')) {
+						wfWAFRuntimeHealth::complete('blocklist-cache');
 					}
 					
 					$cacheTest = base64_encode(wfWAFUtils::inet_pton(wfWAF::getInstance()->getRequest()->getIP()));
@@ -309,9 +427,34 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
 							
 							if ($response instanceof wfWAFHTTPResponse && $response->getBody()) {
 								$jsonData = wfWAFUtils::json_decode($response->getBody(), true);
-								if (is_array($jsonData) && array_key_exists('data', $jsonData)) {
+								if (is_array($jsonData) && isset($jsonData['data']) && is_string($jsonData['data'])) {
+									$lookupSucceeded = (int) $response->getStatusCode() === 200;
+									if ($lookupSucceeded) {
+										wfWAFRuntimeHealth::complete('blocklist-lookup');
+										// Also recover lookup failures recorded under the original shared component.
+										wfWAFRuntimeHealth::complete('blocklist');
+									}
 									if (preg_match('/^block:(\d+)$/i', $jsonData['data'], $matches)) {
-										wfWAF::getInstance()->getStorageEngine()->blockIP((int)$matches[1] + time(), wfWAF::getInstance()->getRequest()->getIP(), wfWAFStorageInterface::IP_BLOCKS_BLACKLIST);
+										try {
+											$storage = wfWAF::getInstance()->getStorageEngine();
+											$ip = wfWAF::getInstance()->getRequest()->getIP();
+											if ($storage->blockIP((int)$matches[1] + time(), $ip, wfWAFStorageInterface::IP_BLOCKS_BLACKLIST) === false) {
+												throw new RuntimeException('Block cache write failed');
+											}
+											if ($storage instanceof wfWAFStorageMySQL && $storage->saveConfig() === false) {
+												throw new RuntimeException('Block cache persistence failed');
+											}
+											if (!$storage->isIPBlocked($ip)) {
+												throw new RuntimeException('Block cache verification failed');
+											}
+											wfWAFRuntimeHealth::complete('blocklist-cache');
+										}
+										catch (Exception $failure) {
+											wfWAFRuntimeHealth::failure('blocklist-cache', 'save-failed', $failure, false);
+										}
+										catch (Throwable $failure) {
+											wfWAFRuntimeHealth::failure('blocklist-cache', 'save-failed', $failure, false);
+										}
 										$e = new wfWAFBlockException();
 										$e->setFailedRules(array('blocked'));
 										$e->setRequest(wfWAF::getInstance()->getRequest());
@@ -324,27 +467,41 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
 								}
 							}
 						} catch (wfWAFHTTPTransportException $e) {
-							error_log($e->getMessage());
+							wfWAFRuntimeHealth::failure('blocklist-lookup', 'lookup-failed', $e);
 						}
 					}
 				}
 			}
 		}
-		
-		if ($reason = wfWAF::getInstance()->getRequest()->getMetadata('finalAction')) {
-			$e = new wfWAFBlockException($reason['action']);
-			$e->setRequest(wfWAF::getInstance()->getRequest());
-			throw $e;
+		else {
+			return false;
 		}
+		$issues = wfWAFRuntimeHealth::snapshot()['issues'];
+		return $lookupSucceeded || !isset($issues['blocklist']) || $issues['blocklist']['code'] !== 'lookup-failed';
 	}
 	
+	/**
+	 * Looks up an IP in a structurally valid binary prefix list.
+	 * @param mixed $prefixList Decoded prefix data.
+	 * @param string $ip IP address to check.
+	 * @return int|false Matching record index, or false for invalid data or no match.
+	 */
 	private function _prefixListContainsIP($prefixList, $ip) {
+		if (!is_string($prefixList) || $prefixList === '') {
+			wfWAFRuntimeHealth::failure('blocklist', 'invalid-prefix-list');
+			return false;
+		}
 		$size = ord(wfWAFUtils::substr($prefixList, 0, 1));
+		$payloadLength = wfWAFUtils::strlen($prefixList) - 1;
+		if ($size < 1 || $size > 32 || $payloadLength % $size !== 0 || $payloadLength === 0) {
+			wfWAFRuntimeHealth::failure('blocklist', 'invalid-prefix-list');
+			return false;
+		}
 		
 		$sha256 = hash('sha256', wfWAFUtils::inet_pton($ip), true);
 		$p = wfWAFUtils::substr($sha256, 0, $size);
 		
-		$count = ceil((wfWAFUtils::strlen($prefixList) - 1) / $size);
+		$count = (int) ($payloadLength / $size);
 		$low = 0;
 		$high = $count - 1;
 		
@@ -371,6 +528,116 @@ class wfWAFWordPressObserver extends wfWAFBaseObserver {
  *
  */
 class wfWAFWordPress extends wfWAF {
+	private $learningMode = null;
+
+	/**
+	 * Validate and snapshot policy before evaluating the request.
+	 *
+	 * @return void
+	 */
+	public function run() {
+		try {
+			$status = $this->getStorageEngine()->getConfig('wafStatus');
+			if (WFWAF_ENABLED && !in_array($status, array('enabled', 'learning-mode', 'disabled'), true)) {
+				throw new RuntimeException('Invalid WAF policy');
+			}
+			if ($status === 'learning-mode') {
+				$grace = $this->getStorageEngine()->getConfig('learningModeGracePeriod', 0);
+				if (!is_numeric($grace)) {
+					throw new RuntimeException('Invalid learning period');
+				}
+			}
+			foreach (array('wafDisabled', 'learningModeGracePeriodEnabled') as $flag) {
+				if (!in_array($this->getStorageEngine()->getConfig($flag, false), array(null, false, true, 0, 1, '0', '1', ''), true)) {
+					throw new RuntimeException('Invalid WAF policy flag');
+				}
+			}
+			$this->learningMode = parent::isInLearningMode();
+			wfWAFRuntimeHealth::complete('policy');
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure('policy', 'policy-unavailable', $e);
+			return;
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure('policy', 'policy-unavailable', $e);
+			return;
+		}
+		parent::run();
+	}
+
+	/**
+	 * Reuse the policy that was validated before evaluation.
+	 *
+	 * @return bool
+	 */
+	public function isInLearningMode() {
+		return $this->learningMode === null ? parent::isInLearningMode() : $this->learningMode;
+	}
+
+	/**
+	 * Distinguish learned rule matches from enforcing IP and plugin blocks.
+	 *
+	 * @param wfWAFRunException $exception Decision.
+	 * @return bool
+	 */
+	protected function shouldEnforceBlock($exception) {
+		if (!$this->isInLearningMode()) {
+			return true;
+		}
+		$rules = $exception->getFailedRules();
+		return (is_array($rules) && in_array('blocked', $rules, true)) || (bool) $exception->getRequest()->getMetadata('finalAction');
+	}
+
+	/**
+	 * Normalize supported controller contracts without dropping unknown context fields.
+	 *
+	 * @param mixed $action Controller result.
+	 * @return array|false
+	 */
+	public static function normalizeFinalAction($action) {
+		if ($action === false || $action === null || $action === '') {
+			return false;
+		}
+		if ($action === true) {
+			return array('action' => 'Access denied');
+		}
+		if (is_string($action)) {
+			return array('action' => $action);
+		}
+		if (is_array($action) && isset($action['action']) && is_string($action['action'])) {
+			if (isset($action['id']) && !is_numeric($action['id'])) {
+				unset($action['id']);
+				wfWAFRuntimeHealth::failure('plugin-blocks', 'invalid-decision');
+			}
+			if (isset($action['lockout']) && !is_scalar($action['lockout'])) {
+				unset($action['lockout']);
+				wfWAFRuntimeHealth::failure('plugin-blocks', 'invalid-decision');
+			}
+			return $action;
+		}
+		wfWAFRuntimeHealth::failure('plugin-blocks', 'invalid-decision');
+		return false;
+	}
+
+	/**
+	 * Terminate an established block even with a legacy parent engine.
+	 *
+	 * @return void
+	 */
+	private function emergencyWordPressBlockResponse() {
+		wfWAFRuntimeHealth::outcome('blocked');
+		try {
+			@header('HTTP/1.0 403 Forbidden');
+			@header('Content-Type: text/plain; charset=UTF-8');
+			@header('Cache-Control: no-store');
+		}
+		catch (Exception $e) {
+		}
+		catch (Throwable $e) {
+		}
+		exit('Forbidden');
+	}
 
 	/** @var wfWAFRunException */
 	private $learningModeAttackException;
@@ -380,6 +647,45 @@ class wfWAFWordPress extends wfWAF {
 	 * @param int $httpCode
 	 */
 	public function blockAction($e, $httpCode = 403, $redirect = false, $template = null) {
+		$enforce = $this->learningMode !== true;
+		try {
+			$enforce = $this->shouldEnforceBlock($e);
+			$this->performWordPressBlockAction($e, $httpCode, $redirect, $template);
+			wfWAFRuntimeHealth::complete('block-handler');
+			if (!$enforce) {
+				wfWAFRuntimeHealth::outcome('learning');
+			}
+		}
+		catch (wfWAFAllowException $allowed) {
+			wfWAFRuntimeHealth::outcome('allowed');
+			return;
+		}
+		catch (Exception $failure) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $failure, false);
+			if ($enforce) {
+				$this->emergencyWordPressBlockResponse();
+			}
+			wfWAFRuntimeHealth::outcome('learning');
+		}
+		catch (Throwable $failure) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $failure, false);
+			if ($enforce) {
+				$this->emergencyWordPressBlockResponse();
+			}
+			wfWAFRuntimeHealth::outcome('learning');
+		}
+	}
+
+	/**
+	 * Apply WordPress response customization inside the guarded action.
+	 *
+	 * @param wfWAFRunException $e Decision.
+	 * @param int $httpCode Status.
+	 * @param string|false $redirect Redirect.
+	 * @param string|null $template Template.
+	 * @return void
+	 */
+	private function performWordPressBlockAction($e, $httpCode = 403, $redirect = false, $template = null) {
 		$failedRules = $e->getFailedRules();
 		if (!is_array($failedRules)) {
 			$failedRules = array();
@@ -392,6 +698,7 @@ class wfWAFWordPress extends wfWAF {
 			$this->getStorageEngine()->logAttack($e->getFailedRules(), $e->getParamKey(), $e->getParamValue(), $e->getRequest());
 			$this->setLearningModeAttackException($e);
 		} else {
+			wfWAFRuntimeHealth::outcome('blocked');
 			if (empty($failedRules)) {
 				$finalAction = $e->getRequest()->getMetadata('finalAction');
 				if (is_array($finalAction)) {
@@ -416,15 +723,21 @@ class wfWAFWordPress extends wfWAF {
 						$httpCode = 503;
 						
 						if ($isLockedOut) {
+							wfWAFRuntimeHealth::complete('block-handler');
+							wfWAFRuntimeHealth::outcome('blocked');
 							parent::blockAction($e, $httpCode, $redirect, '503-lockout'); //exits
 						}
 					}
 				}
 			}
 			else if (array_search('blocked', $failedRules) !== false) {
+				wfWAFRuntimeHealth::complete('block-handler');
+				wfWAFRuntimeHealth::outcome('blocked');
 				parent::blockAction($e, $httpCode, $redirect, '403-blacklist'); //exits
 			}
 			
+			wfWAFRuntimeHealth::complete('block-handler');
+			wfWAFRuntimeHealth::outcome('blocked');
 			parent::blockAction($e, $httpCode, $redirect, $template);
 		}
 	}
@@ -434,6 +747,44 @@ class wfWAFWordPress extends wfWAF {
 	 * @param int $httpCode
 	 */
 	public function blockXSSAction($e, $httpCode = 403, $redirect = false) {
+		$enforce = $this->learningMode !== true;
+		try {
+			$enforce = $this->shouldEnforceBlock($e);
+			$this->performWordPressBlockXSSAction($e, $httpCode, $redirect);
+			wfWAFRuntimeHealth::complete('block-handler');
+			if (!$enforce) {
+				wfWAFRuntimeHealth::outcome('learning');
+			}
+		}
+		catch (wfWAFAllowException $allowed) {
+			wfWAFRuntimeHealth::outcome('allowed');
+			return;
+		}
+		catch (Exception $failure) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $failure, false);
+			if ($enforce) {
+				$this->emergencyWordPressBlockResponse();
+			}
+			wfWAFRuntimeHealth::outcome('learning');
+		}
+		catch (Throwable $failure) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $failure, false);
+			if ($enforce) {
+				$this->emergencyWordPressBlockResponse();
+			}
+			wfWAFRuntimeHealth::outcome('learning');
+		}
+	}
+
+	/**
+	 * Apply WordPress response customization inside the guarded action.
+	 *
+	 * @param wfWAFRunException $e Decision.
+	 * @param int $httpCode Status.
+	 * @param string|false $redirect Redirect.
+	 * @return void
+	 */
+	private function performWordPressBlockXSSAction($e, $httpCode = 403, $redirect = false) {
 		if ($this->isInLearningMode() && !$e->getRequest()->getMetadata('finalAction')) {
 			register_shutdown_function(array(
 				$this, 'whitelistFailedRulesIfNot404',
@@ -467,6 +818,8 @@ class wfWAFWordPress extends wfWAF {
 				}
 			}
 			
+			wfWAFRuntimeHealth::complete('block-handler');
+			wfWAFRuntimeHealth::outcome('blocked');
 			parent::blockXSSAction($e, $httpCode, $redirect);
 		}
 	}
@@ -482,31 +835,37 @@ class wfWAFWordPress extends wfWAF {
 		if($this->isCli()){
 			return;
 		}
-		/**
-		 * Removed sending attack data. Attack data is sent in @see wordfence::veryFirstAction
-		 */
+		// WordPress sends attack data separately in veryFirstAction().
 		$storage = $this->getStorageEngine();
-		$cron = (array) $storage->getConfig('cron', null, 'livewaf');
+		$cron = $storage->getConfig('cron', null, 'livewaf');
+		if ($cron !== null && !is_array($cron)) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
+			return;
+		}
+		$cron = (array) $cron;
 		$run = array();
 		$updated = false;
-		if (is_array($cron)) {
-			/** @var wfWAFCronEvent $event */
 			$cronDeduplication = array();
 			foreach ($cron as $index => $event) {
-				if (is_object($event) && $event instanceof wfWAFCronEvent) {
+			try {
+				if (!($event instanceof wfWAFCronEvent)) {
+					unset($cron[$index]);
+					$updated = true;
+					wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
+					continue;
+				}
 					$event->setWaf($this);
 					if ($event->isInPast()) {
-						$run[$index] = $event;
+					$run[] = $event;
 						$newEvent = $event->reschedule();
 						$className = is_object($newEvent) ? get_class($newEvent) : null;
-						if ($newEvent && $newEvent instanceof wfWAFCronEvent && $newEvent !== $event && !in_array($className, $cronDeduplication)) {
+					if ($newEvent instanceof wfWAFCronEvent && $newEvent !== $event && !in_array($className, $cronDeduplication)) {
 							$cron[$index] = $newEvent;
 							$cronDeduplication[] = $className;
-							$updated = true;
 						} else {
 							unset($cron[$index]);
+					}
 							$updated = true;
-						}
 					}
 					else {
 						$className = get_class($event);
@@ -519,20 +878,37 @@ class wfWAFWordPress extends wfWAF {
 						}
 					}
 				}
-				else { //Remove bad/corrupt records
-					unset($cron[$index]);
-					$updated = true;
+			catch (Exception $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
+			}
+			catch (Throwable $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
 				}
 			}
-		}
+		try {
 		$storage->setConfig('cron', $cron, 'livewaf');
-		
-		if ($updated && method_exists($storage, 'saveConfig')) {
-			$storage->saveConfig('livewaf');
+			if ($updated && method_exists($storage, 'saveConfig') && $storage->saveConfig('livewaf') === false) {
+				throw new RuntimeException('Cron persistence failed');
 		}
-		
-		foreach ($run as $index => $event) {
-			$event->fire();
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-storage');
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-storage');
+		}
+		foreach ($run as $event) {
+			try {
+				if ($event->fire() === false) {
+					wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+				}
+			}
+			catch (Exception $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+			}
+			catch (Throwable $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+			}
 		}
 	}
 
@@ -567,8 +943,18 @@ class wfWAFWordPress extends wfWAF {
 		try {
 			$disableWAFIPBlocking = $this->getStorageEngine()->getConfig('disableWAFIPBlocking', null, 'synced');
 			$advancedBlockingEnabled = $this->getStorageEngine()->getConfig('advancedBlockingEnabled', null, 'synced');
+			foreach (array($disableWAFIPBlocking, $advancedBlockingEnabled) as $flag) {
+				if ($flag !== null && !is_scalar($flag)) {
+					throw new UnexpectedValueException('Invalid plugin blocking policy');
+				}
+			}
 		}
 		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure('plugin-blocks', 'configuration-unavailable', $e);
+			return false;
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure('plugin-blocks', 'configuration-unavailable', $e);
 			return false;
 		}
 		
@@ -769,7 +1155,16 @@ class wfWAFWordPressI18n implements wfWAFI18nEngine {
 	 */
 	public function __construct($storageEngine) {
 		$this->storageEngine = $storageEngine;
+		try {
 		$this->loadTranslations();
+			wfWAFRuntimeHealth::complete('translations');
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure('translations', 'catalog-unavailable', $e, false);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure('translations', 'catalog-unavailable', $e, false);
+		}
 	}
 
 	/**
@@ -802,6 +1197,13 @@ class wfWAFWordPressI18n implements wfWAFI18nEngine {
 		require_once dirname(__FILE__) . '/pomo/mo.php';
 
 		$currentLocale = $this->storageEngine->getConfig('WPLANG', '', 'synced');
+		// WordPress returns false when the site language option is unset.
+		if ($currentLocale === false) {
+			$currentLocale = '';
+		}
+		if (!is_string($currentLocale)) {
+			throw new InvalidArgumentException('Invalid locale');
+		}
 		if (!preg_match("/^[a-zA-Z_]+$/", $currentLocale))
 			return false;
 		$filename = "wordfence-{$currentLocale}.mo";
@@ -978,11 +1380,12 @@ try {
 					wfWAF::getInstance()->getStorageEngine()->setConfig('createInitialRulesDelay', time() + (5 * 60), 'transient');
 				}
 			} catch (wfWAFBuildRulesException $e) {
-				// Log this somewhere
-				error_log($e->getMessage());
+					wfWAFRuntimeHealth::reportMaintenanceFailure('rule-refresh');
 			} catch (Exception $e) {
-				// Suppress this
-				error_log($e->getMessage());
+					wfWAFRuntimeHealth::reportMaintenanceFailure('rule-refresh');
+				}
+				catch (Throwable $e) {
+					wfWAFRuntimeHealth::reportMaintenanceFailure('rule-refresh');
 			}
 		}
 	}
@@ -1002,43 +1405,49 @@ try {
 	try {
 		wfWAF::getInstance()->run();
 	} catch (wfWAFBuildRulesException $e) {
-		// Log this
-		error_log($e->getMessage());
+			wfWAFRuntimeHealth::failure('rules', 'load-failed', $e);
 	}
 
 } catch (wfWAFStorageFileConfigException $e) {
-	// Let this request through for now
-	error_log($e->getMessage());
+		wfWAFRuntimeHealth::failure('bootstrap', 'storage-unavailable', $e);
 
 } catch (wfWAFStorageEngineMySQLiException $e) {
-	// Let this request through for now
-	error_log($e->getMessage());
+		wfWAFRuntimeHealth::failure('bootstrap', 'storage-unavailable', $e);
 
 } catch (wfWAFStorageFileException $e) {
-	// We need to choose another storage engine here.
+		wfWAFRuntimeHealth::failure('bootstrap', 'storage-unavailable', $e);
 }
 
 }
-catch (Exception $e) { // In PHP 5, Throwable does not exist
-	error_log("An unexpected exception occurred during WAF execution: {$e}");
-	$wf_waf_failure = array(
-		'throwable' => $e
-	);
+catch (Exception $e) {
+	wfWAFRuntimeHealth::failure('bootstrap', 'execution-failed', $e);
+	$GLOBALS['wf_waf_failure'] = array('throwable' => new RuntimeException('WAF execution failed'));
 }
-catch (Throwable $t) {
-	error_log("An unexpected exception occurred during WAF execution: {$t}");
-	if (class_exists('ParseError') && $t instanceof ParseError) {
-		//Do nothing
-	}
-	else {
-		$wf_waf_failure = array(
-			'throwable' => $t
-		);
-	}
+catch (Throwable $e) {
+	wfWAFRuntimeHealth::failure('bootstrap', 'execution-failed', $e);
+	$GLOBALS['wf_waf_failure'] = array('throwable' => new RuntimeException('WAF execution failed'));
 }
 if (wfWAF::getInstance() === null) {
 	require_once __DIR__ . '/dummy.php';
 	wfWAF::setInstance(new wfDummyWaf());
 }
+if (wfWAFRuntimeHealth::snapshot()['outcome'] !== 'incomplete') {
+	wfWAFRuntimeHealth::complete('bootstrap');
+}
+wfWAFRuntimeHealth::flush();
 define('WFWAF_RUN_COMPLETE', true);
+}
+catch (Exception $e) {
+wfWAFRuntimeHealth::failure('bootstrap', 'initialization-failed', $e);
+}
+catch (Throwable $e) {
+wfWAFRuntimeHealth::failure('bootstrap', 'initialization-failed', $e);
+}
+finally {
+	// exit() intentionally leaves display disabled for the rest of a blocked request.
+	if ($wfWAFBootstrapDisplayErrors !== false) {
+		@ini_set('display_errors', $wfWAFBootstrapDisplayErrors);
+	}
+	unset($wfWAFBootstrapDisplayErrors);
+}
 }

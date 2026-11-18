@@ -680,37 +680,41 @@ class Controller_AJAX {
 				if ($errors !== true) {
 					if (count($errors) == 1) {
 						$e = array_shift($errors);
-						self::send_json(array('error' => esc_html(sprintf(/* translators: Error message. */ __('An error occurred while saving the configuration: %s', 'wordfence'), $e))));
+						$response = array('error' => esc_html(sprintf(/* translators: Error message. */ __('An error occurred while saving the configuration: %s', 'wordfence'), $e)));
 					}
 					else if (count($errors) > 1) {
 						$compoundMessage = array();
 						foreach ($errors as $e) {
 							$compoundMessage[] = esc_html($e);
 						}
-						self::send_json(array(
+						$response = array(
 							'error' => wp_kses(sprintf(__('Errors occurred while saving the configuration: %s', 'wordfence'), '<ul><li>' . implode('</li><li>', $compoundMessage) . '</li></ul>'), array('ul'=>array(), 'li'=>array())),
 							'html' => true,
-						));
+						);
 					}
-					
-					self::send_json(array(
-						'error' => esc_html__('Errors occurred while saving the configuration.', 'wordfence'),
-					));
+					else {
+						$response = array('error' => esc_html__('Errors occurred while saving the configuration.', 'wordfence'));
+					}
 				}
-				
-				Controller_Settings::shared()->set_multiple($changes);
-
-				if (array_key_exists(Controller_Settings::OPTION_ENABLE_WOOCOMMERCE_ACCOUNT_INTEGRATION, $changes) || array_key_exists(Controller_Settings::OPTION_ENABLE_WOOCOMMERCE_INTEGRATION, $changes))
-					Controller_WordfenceLS::shared()->refresh_rewrite_rules();
-				
-				$response = array('success' => true);
-				self::send_json($response);
+				else {
+					$settings = Controller_Settings::shared();
+					$requiresCaptchaValidation = $settings->recaptcha_validation_required($changes);
+					$token = isset($_POST['recaptcha_validation_token']) && is_string($_POST['recaptcha_validation_token']) ? $_POST['recaptcha_validation_token'] : '';
+					if (!$settings->set_multiple($changes, false, array('recaptcha_token' => $token))) {
+						$response = array('error' => $requiresCaptchaValidation ? esc_html__('Unable to validate the reCAPTCHA keys. Check both keys and try again.', 'wordfence') : esc_html__('Errors occurred while saving the configuration.', 'wordfence'));
+					}
+					if (!isset($response)) {
+						if (array_key_exists(Controller_Settings::OPTION_ENABLE_WOOCOMMERCE_ACCOUNT_INTEGRATION, $changes) || array_key_exists(Controller_Settings::OPTION_ENABLE_WOOCOMMERCE_INTEGRATION, $changes)) {
+							Controller_WordfenceLS::shared()->refresh_rewrite_rules();
+						}
+						$response = array('success' => true);
+					}
+				}
 			}
 			catch (\Exception $e) {
-				self::send_json(array(
-					'error' => $e->getMessage(),
-				));
+				$response = array('error' => $e->getMessage());
 			}
+			self::send_json($response);
 		}
 		
 		self::send_json(array(

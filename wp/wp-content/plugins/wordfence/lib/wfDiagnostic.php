@@ -45,6 +45,9 @@ class wfGrant
 
 class wfDiagnostic
 {
+	const WFLOGS_REMOVAL_MAX_EVENTS = 5;
+	const WFLOGS_REMOVAL_MAX_FILENAMES = 5;
+
 	protected $description = false; //Defined in the constructor to allow for localization
 
 	protected $results = array();
@@ -591,18 +594,138 @@ class wfDiagnostic
 		return array('test' => true, 'infoOnly' => true, 'message' => __('0660 - using default', 'wordfence'));
 	}
 	
+	/**
+	 * Create an empty removal summary.
+	 *
+	 * @param int $timestamp Event timestamp.
+	 * @return array
+	 */
+	public static function createWflogsRemovalEvent($timestamp) {
+		return array('timestamp' => $timestamp, 'count' => 0, 'filenames' => array(), 'hasMore' => false);
+	}
+
+	/**
+	 * Accumulate a deletion result using the legacy count and display semantics.
+	 * Nested arrays contribute to the count but are not displayed as filenames.
+	 *
+	 * @param array $event Summary to update.
+	 * @param array $removed Result from recursive removal.
+	 * @return void
+	 */
+	public static function addRemovedWflogsFiles(&$event, $removed) {
+		$event['count'] += count($removed);
+		foreach ($removed as $filename) {
+			if (!is_string($filename)) {
+				continue;
+			}
+			if (count($event['filenames']) < self::WFLOGS_REMOVAL_MAX_FILENAMES) {
+				$event['filenames'][] = $filename;
+			}
+			else {
+				$event['hasMore'] = true;
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Normalize legacy tuples, backward-compatible extended tuples, and summaries, preserving order without age expiry.
+	 * Extended tuples retain the timestamp and filename positions expected by older plugin versions.
+	 *
+	 * @param mixed $history Decoded history.
+	 * @return array At most five valid events.
+	 */
+	public static function normalizeWflogsRemovalHistory($history) {
+		$result = array();
+		if (!is_array($history)) {
+			return $result;
+		}
+		foreach ($history as $record) {
+			if (!is_array($record)) {
+				continue;
+			}
+			if (isset($record[0], $record[1]) && is_int($record[0]) && $record[0] >= 0 && is_array($record[1])) {
+				$event = self::createWflogsRemovalEvent($record[0]);
+				self::addRemovedWflogsFiles($event, $record[1]);
+				if (isset($record[2], $record[3]) && is_int($record[2]) && $record[2] >= 0 && is_bool($record[3])) {
+					$event['count'] = $record[2];
+					$event['hasMore'] = $event['hasMore'] || $record[3];
+				}
+			}
+			elseif (isset($record['timestamp'], $record['count'], $record['filenames'], $record['hasMore']) &&
+				is_int($record['timestamp']) && $record['timestamp'] >= 0 &&
+				is_int($record['count']) && $record['count'] >= 0 &&
+				is_array($record['filenames']) && is_bool($record['hasMore'])) {
+				$event = self::createWflogsRemovalEvent($record['timestamp']);
+				self::addRemovedWflogsFiles($event, $record['filenames']);
+				$event['count'] = $record['count'];
+				$event['hasMore'] = $event['hasMore'] || $record['hasMore'];
+			}
+			else {
+				continue;
+			}
+			$result[] = $event;
+			if (count($result) === self::WFLOGS_REMOVAL_MAX_EVENTS) {
+				break;
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * Serialize bounded summaries with the timestamp and filename positions read by older versions.
+	 *
+	 * @param array $history Removal history to normalize and serialize.
+	 * @return array Events in the form [timestamp, sample filenames, total count, has more].
+	 */
+	public static function serializeWflogsRemovalHistory($history) {
+		$result = array();
+		foreach (self::normalizeWflogsRemovalHistory($history) as $event) {
+			$result[] = array($event['timestamp'], $event['filenames'], $event['count'], $event['hasMore']);
+		}
+		return $result;
+	}
+
+	/**
+	 * Prepend a nonempty event and persist bounded, non-autoloaded history.
+	 *
+	 * @param array $event Removal summary.
+	 * @return void
+	 */
+	public static function recordWflogsRemovalEvent($event) {
+		if ($event['count'] === 0) {
+			return;
+		}
+		$history = self::normalizeWflogsRemovalHistory(wfConfig::getJSON('diagnosticsWflogsRemovalHistory', array()));
+		array_unshift($history, $event);
+		wfConfig::setJSON('diagnosticsWflogsRemovalHistory', self::serializeWflogsRemovalHistory($history), wfConfig::DONT_AUTOLOAD);
+	}
+
+	/**
+	 * Repair existing configuration on installation or upgrade, without new removals.
+	 *
+	 * @return void
+	 */
+	public static function repairWflogsRemovalHistory() {
+		$history = self::normalizeWflogsRemovalHistory(wfConfig::getJSON('diagnosticsWflogsRemovalHistory', array(), false));
+		wfConfig::setJSON('diagnosticsWflogsRemovalHistory', self::serializeWflogsRemovalHistory($history), wfConfig::DONT_AUTOLOAD);
+		$previous = wfConfig::get('previousWflogsFileList', null, false);
+		if ($previous !== null) {
+			wfConfig::set('previousWflogsFileList', $previous, wfConfig::DONT_AUTOLOAD);
+		}
+	}
+
 	public function wafRecentlyRemoved() {
-		$removalHistory = wfConfig::getJSON('diagnosticsWflogsRemovalHistory', array());
+		$removalHistory = wfDiagnostic::normalizeWflogsRemovalHistory(wfConfig::getJSON('diagnosticsWflogsRemovalHistory', array()));
 		if (empty($removalHistory)) {
 			return array('test' => true, 'infoOnly' => true, 'message' => __('None', 'wordfence'));
 		}
 		
 		$message = array();
 		foreach ($removalHistory as $r) {
-			$m = wfUtils::formatLocalTime('M j, Y', $r[0]) . ': (' . count($r[1]) . ')';
-			$r[1] = array_filter($r[1], array($this, '_filterOutNestedEntries'));
-			$m .= ' ' . implode(', ', array_slice($r[1], 0, 5));
-			if (count($r[1]) > 5) {
+			$m = wfUtils::formatLocalTime('M j, Y', $r['timestamp']) . ': (' . $r['count'] . ')';
+			$m .= ' ' . implode(', ', $r['filenames']);
+			if ($r['hasMore']) {
 				$m .= ', ...';
 			}
 			$message[] = $m;
@@ -618,10 +741,6 @@ class wfDiagnostic
 			'infoOnly' => true,
 			'message' => $waf !== null && ($waf instanceof wfWAFWordPress) ? __('Yes', 'wordfence') : __('No', 'wordfence')
 		);
-	}
-	
-	private function _filterOutNestedEntries($a) {
-		return !is_array($a);
 	}
 
 	public function processOwner() {

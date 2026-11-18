@@ -810,7 +810,19 @@ class wfWAFRuleComparison implements wfWAFRuleInterface {
 		} else {
 			$this->matches = null;
 			$this->multiplier = null;
-			if (!call_user_func($callback, $global)) {
+			$rule = $this->getRule();
+			if (wfWAFUtils::strtolower($this->getAction()) === 'matchcount' && $rule instanceof wfWAFRule && $rule->getCategory() === 'sqli') {
+				$result = $this->getWAF()->matchSQLiRegex($rule, $subjectKey, (string) $global, (string) $this->getExpected());
+				if ($result === false) {
+					return false;
+				}
+				$this->multiplier = $result['count'];
+				$this->matches = $result['matches'];
+				if ($this->multiplier === 0) {
+					return false;
+				}
+			}
+			else if (!call_user_func($callback, $global)) {
 				return false;
 			}
 			$result = true;
@@ -933,6 +945,11 @@ class wfWAFRuleComparison implements wfWAFRuleInterface {
 		return md5((string) $subject) === $this->getExpected();
 	}
 	
+	/**
+	 * Matches uploaded file contents while temporarily bounding PCRE backtracking when permitted.
+	 * @param mixed $subject Uploaded filename to inspect.
+	 * @return bool Whether a malware pattern matches.
+	 */
 	public function filePatternsMatch($subject) {
 		$request = $this->getWAF()->getRequest();
 		$files = $request->getFiles();
@@ -941,73 +958,74 @@ class wfWAFRuleComparison implements wfWAFRuleInterface {
 		if (!is_array($patterns) || !is_array($files)) {
 			return false;
 		}
-		
+
 		$backtrackLimit = ini_get('pcre.backtrack_limit');
-		if (is_numeric($backtrackLimit)) {
-			$backtrackLimit = (int) $backtrackLimit;
-			if ($backtrackLimit > 10000000) {
-				ini_set('pcre.backtrack_limit', 1000000);
-			}
+		$previousBacktrackLimit = false;
+		if (is_numeric($backtrackLimit) && (int) $backtrackLimit > 10000000 && function_exists('ini_set')) {
+			$previousBacktrackLimit = @ini_set('pcre.backtrack_limit', '1000000');
 		}
-		else {
-			$backtrackLimit = false;
-		}
-		
-		foreach ($files as $file) {
-			if ($file['name'] == (string) $subject) {
-				if (!is_file($file['tmp_name'])) {
-					continue;
-				}
-				$fh = @fopen($file['tmp_name'], 'r');
-				if (!$fh) {
-					continue;
-				}
-				$totalRead = 0;
-				
-				$first = true;
-				$readsize = max(min(10 * 1024 * 1024, wfWAFUtils::iniSizeToBytes(ini_get('upload_max_filesize'))), 1 * 1024 * 1024);
-				while (!feof($fh)) {
-					$data = fread($fh, $readsize);
-					$totalRead += strlen($data);
-					if ($totalRead < 1) {
-						return false;
+
+		try {
+			foreach ($files as $file) {
+				if ($file['name'] == (string) $subject) {
+					if (!is_file($file['tmp_name'])) {
+						continue;
 					}
-					
-					$commonStringsChecked = array();
-					foreach ($patterns as $index => $rule) {
-						if (@preg_match('/' . $rule . '/iS', '') === false) {
-							continue; //This PCRE version can't compile the rule
-						}
-						
-						if (!$first && substr($rule, 0, 1) == '^') {
-							continue; //Signature only applies to file beginning
-						}
-						
-						if (isset($commonStrings[$index])) {
-							foreach ($commonStrings[$index] as $s) {
-								if (!isset($commonStringsChecked[$s])) {
-									$commonStringsChecked[$s] = (preg_match('/' . $s . '/iS', $data) == 1);
+					$fh = @fopen($file['tmp_name'], 'r');
+					if (!$fh) {
+						continue;
+					}
+					try {
+						$first = true;
+						$readsize = max(min(10 * 1024 * 1024, wfWAFUtils::iniSizeToBytes(ini_get('upload_max_filesize'))), 1 * 1024 * 1024);
+						while (!feof($fh)) {
+							$data = fread($fh, $readsize);
+							if ($data === false || $data === '') {
+								break;
+							}
+
+							$commonStringsChecked = array();
+							foreach ($patterns as $index => $rule) {
+								if (@preg_match('/' . $rule . '/iS', '') === false) {
+									continue; //This PCRE version can't compile the rule
 								}
-								
-								if (!$commonStringsChecked[$s]) {
-									continue 2;
+
+								if (!$first && substr($rule, 0, 1) == '^') {
+									continue; //Signature only applies to file beginning
+								}
+
+								if (isset($commonStrings[$index])) {
+									foreach ($commonStrings[$index] as $s) {
+										if (!isset($commonStringsChecked[$s])) {
+											$commonStringsChecked[$s] = (preg_match('/' . $s . '/iS', $data) == 1);
+										}
+
+										if (!$commonStringsChecked[$s]) {
+											continue 2;
+										}
+									}
+								}
+
+								if (preg_match('/(' . $rule . ')/iS', $data, $matches)) {
+									return true;
 								}
 							}
-						}
-						
-						if (preg_match('/(' . $rule . ')/iS', $data, $matches)) {
-							if ($backtrackLimit !== false) { ini_set('pcre.backtrack_limit', $backtrackLimit); }
-							return true;
+
+							$first = false;
 						}
 					}
-					
-					$first = false;
-				}	
+					finally {
+						fclose($fh);
+					}
+				}
+			}
+			return false;
+		}
+		finally {
+			if ($previousBacktrackLimit !== false && function_exists('ini_set')) {
+				@ini_set('pcre.backtrack_limit', $previousBacktrackLimit);
 			}
 		}
-		
-		if ($backtrackLimit !== false) { ini_set('pcre.backtrack_limit', $backtrackLimit); }
-		return false;
 	}
 
 	private function checkForPhp($path) {
@@ -1991,9 +2009,19 @@ class wfWAFRuleComparisonSubject {
 		return $value;
 	}
 
+	/**
+	 * Replaces supported leaves recursively, preserving array keys and nesting.
+	 * @param mixed $value Subject; null array elements are treated as empty strings.
+	 * @param string|array $find Values to replace.
+	 * @param string|array $replace Replacement values.
+	 * @return mixed Transformed subject, or unchanged unsupported value.
+	 */
 	public function filterReplace($value, $find, $replace) {
 		if (is_array($value)) {
-			return str_replace($find, $replace, $value);
+			foreach ($value as $key => $item) {
+				$value[$key] = $this->filterReplace($item === null ? '' : $item, $find, $replace);
+			}
+			return $value;
 		}
 		if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
 			return str_replace($find, $replace, (string) $value);
@@ -2001,9 +2029,23 @@ class wfWAFRuleComparisonSubject {
 		return $value;
 	}
 
+	/**
+	 * Replaces supported leaves recursively, preserving array keys and nesting.
+	 * @param mixed $value Subject; null array elements are treated as empty strings.
+	 * @param string|array $pattern Regular expressions.
+	 * @param string|array $replacement Replacement values.
+	 * @param int $limit Maximum replacements per pattern per string; -1 is unlimited.
+	 * @return mixed Transformed subject, or unchanged unsupported value.
+	 */
 	public function filterPregReplace($value, $pattern, $replacement, $limit=-1) {
 		if (is_array($value)) {
-			return preg_replace($pattern, $replacement, $value, $limit);
+			foreach ($value as $key => $item) {
+				$value[$key] = $this->filterPregReplace($item === null ? '' : $item, $pattern, $replacement, $limit);
+				if ($value[$key] === null) {
+					unset($value[$key]); // Match preg_replace() array-subject failure handling.
+				}
+			}
+			return $value;
 		}
 		if (is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
 			return preg_replace($pattern, $replacement, (string) $value, $limit);

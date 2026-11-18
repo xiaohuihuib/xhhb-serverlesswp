@@ -9,6 +9,11 @@ class wfWAF {
 	 * @var wfWAF
 	 */
 	private static $instance;
+	/** @var wfWAFSQLiBudget|null */
+	private $sqliBudget;
+	/** @var bool */
+	private $sqliLimitLogged = false;
+
 	protected $blacklistedParams;
 	protected $whitelistedParams;
 	protected $variables = array();
@@ -59,9 +64,7 @@ class wfWAF {
 	protected $scoresXSS = array();
 	protected $failScores = array();
 	protected $rules = array();
-	/**
-	 * @var wfWAFRequestInterface
-	 */
+	/** @var wfWAFRequestInterface */
 	private $request;
 	/**
 	 * @var wfWAFStorageInterface
@@ -73,6 +76,7 @@ class wfWAF {
 	private $eventBus;
 	private $debug = array();
 	private $disabledRules;
+	private $runtimeLearningMode = false;
 	private $publicKey = '-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzovUDp/qu7r6LT5d8dLL
 H/87aRrCjUd6XtnG+afAPVfMKNp4u4L+UuYfw1RfpfquP/zLMGdfmJCUp/oJywkW
@@ -133,24 +137,43 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 	public function repairCron() {
 		if (!wfWAFStorageFile::allowFileWriting()) { return false; }
 		
-		$cron = $this->getStorageEngine()->getConfig('cron', null, 'livewaf');
+		$storage = $this->getStorageEngine();
+		$cron = $storage->getConfig('cron', null, 'livewaf');
 		$changed = false;
 		if (!is_array($cron)) {
 			$cron = array();
 		}
+		$lastChecked = (int) $storage->getConfig('lastRuleUpdateCheck', 0, 'transient');
+		$maximumExpiry = ($lastChecked > 0 ? $lastChecked : time()) + wfWAFCronFetchRulesEvent::MAX_RULES_INTERVAL;
+		$expires = (int) $storage->getConfig('rulesUpdateExpires', 0, 'livewaf');
+		$expiryCapped = $expires > $maximumExpiry;
+		if ($expiryCapped) {
+			$expires = $maximumExpiry;
+			$storage->setConfig('rulesUpdateExpires', $expires, 'livewaf');
+			$changed = true;
+		}
 		
 		if (!$this->_hasCronOfType($cron, 'wfWAFCronFetchRulesEvent')) {
-			$cron[] = new wfWAFCronFetchRulesEvent(time() +
-				(86400 * ($this->getStorageEngine()->getConfig('isPaid', null, 'synced') ? .5 : 7)));
+			$event = new wfWAFCronFetchRulesEvent(time());
+			$event->setWaf($this);
+			$cron[] = $expiryCapped && $expires <= time() ? $event : $event->reschedule();
 			$changed = true;
 		}
 		else {
 			foreach ($cron as $index => $c) {
-				if ($c instanceof wfWAFCronFetchRulesEvent && $this->getStorageEngine()->getConfig('isPaid', null, 'synced')) {
-					if ($c->getFireTime() > (time() + 43200)) {
+				if ($c instanceof wfWAFCronFetchRulesEvent) {
+					$latestFireTime = time() + wfWAFCronFetchRulesEvent::MAX_RULES_INTERVAL;
+					if ($expiryCapped) {
+						$latestFireTime = min($latestFireTime, $expires);
+					}
+					if ($c->getFireTime() > $latestFireTime) {
+						$c->setFireTime($latestFireTime);
+						$changed = true;
+					}
+					else if ($storage->getConfig('isPaid', null, 'synced') && $c->getFireTime() > (time() + 43200) && $c->getFireTime() != $expires) {
+						$c->setWaf($this);
 						$cron[$index] = $c->reschedule();
 						$changed = true;
-						break;
 					}
 				}
 			}
@@ -198,33 +221,64 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 			$this->sendAttackData();
 		}
 		$cron = $storage->getConfig('cron', null, 'livewaf');
+		if ($cron !== null && !is_array($cron)) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
+			return;
+		}
 		$run = array();
 		$updated = false;
 		if (is_array($cron)) {
-			/** @var wfWAFCronEvent $event */
 			foreach ($cron as $index => $event) {
-				$event->setWaf($this);
-				if ($event->isInPast()) {
-					$run[$index] = $event;
-					$newEvent = $event->reschedule();
-					if ($newEvent && $newEvent instanceof wfWAFCronEvent && $newEvent !== $event) {
-						$cron[$index] = $newEvent;
+				try {
+					if (!($event instanceof wfWAFCronEvent)) {
+						throw new UnexpectedValueException('Invalid maintenance callback');
+					}
+					$event->setWaf($this);
+					if ($event->isInPast()) {
+						$run[] = $event;
+						$newEvent = $event->reschedule();
+						if ($newEvent instanceof wfWAFCronEvent && $newEvent !== $event) {
+							$cron[$index] = $newEvent;
+						}
+						else {
+							unset($cron[$index]);
+						}
 						$updated = true;
 					}
-					else {
-						unset($cron[$index]);
-					}
+				}
+				catch (Exception $e) {
+					wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
+				}
+				catch (Throwable $e) {
+					wfWAFRuntimeHealth::reportMaintenanceFailure('cron-schedule');
 				}
 			}
 		}
-		$storage->setConfig('cron', $cron, 'livewaf');
-		
-		if ($updated && method_exists($storage, 'saveConfig')) {
-			$storage->saveConfig('livewaf');
+		try {
+			$storage->setConfig('cron', $cron, 'livewaf');
+			if ($updated && method_exists($storage, 'saveConfig') && $storage->saveConfig('livewaf') === false) {
+				throw new RuntimeException('Cron persistence failed');
+			}
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-storage');
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('cron-storage');
 		}
 		
-		foreach ($run as $index => $event) {
-			$event->fire();
+		foreach ($run as $event) {
+			try {
+				if ($event->fire() === false) {
+					wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+				}
+			}
+			catch (Exception $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+			}
+			catch (Throwable $e) {
+				wfWAFRuntimeHealth::reportMaintenanceFailure('cron-event');
+			}
 		}
 	}
 
@@ -232,12 +286,37 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 	 *
 	 */
 	public function run() {
-		$this->loadRules();
-		if ($this->isDisabled()) {
+		wfWAFRuntimeHealth::begin(WFWAF_PATH, defined('WFWAF_LOG_PATH') ? WFWAF_LOG_PATH : null);
+		$disabled = $this->isDisabled();
+		$this->runtimeLearningMode = $disabled ? false : $this->isInLearningMode();
+		$rulesAvailable = false;
+		try {
+			$this->loadRules();
+			$rulesAvailable = true;
+			if (!$disabled) {
+				wfWAFRuntimeHealth::complete('rules');
+			}
+		}
+		catch (Exception $e) {
+			$this->rules = array();
+			$this->failScores = $this->variables = $this->whitelistedParams = $this->blacklistedParams = array();
+			if (!$disabled) {
+				wfWAFRuntimeHealth::failure('rules', $e instanceof ParseError ? 'syntax-error' : ($e->getCode() === 1001 ? 'missing' : ($e->getCode() === 1002 ? 'empty' : 'invalid-or-partial')), $e);
+			}
+		}
+		catch (Throwable $e) {
+			$this->rules = array();
+			$this->failScores = $this->variables = $this->whitelistedParams = $this->blacklistedParams = array();
+			if (!$disabled) {
+				wfWAFRuntimeHealth::failure('rules', $e instanceof ParseError ? 'syntax-error' : ($e->getCode() === 1001 ? 'missing' : ($e->getCode() === 1002 ? 'empty' : 'invalid-or-partial')), $e);
+			}
+		}
+		if ($disabled) {
+			wfWAFRuntimeHealth::outcome('disabled');
 			$this->eventBus->wafDisabled();
 			return;
 		}
-		$this->runMigrations();
+		$this->runMaintenance('migrations', array($this, 'runMigrations'));
 		$request = $this->getRequest();
 		if ($request->getBody('wfwaf-false-positive-verified') && $this->currentUserCanWhitelist() &&
 			wfWAFUtils::hash_equals($request->getBody('wfwaf-false-positive-nonce'), $this->getAuthCookieValue('nonce', ''))
@@ -264,85 +343,100 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 		}
 
 		$ip = $this->getRequest()->getIP();
-		if ($this->isIPBlocked($ip)) {
+		$blocked = false;
+		try {
+			$blocked = $this->isIPBlocked($ip);
+			wfWAFRuntimeHealth::complete('ip-blocks');
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure('ip-blocks', 'lookup-failed', $e);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure('ip-blocks', 'lookup-failed', $e);
+		}
+		if ($blocked) {
 			$this->notifyBlockEvent('prevBlocked', $ip);
 			$e = new wfWAFBlockException();
 			$e->setRequest($this->getRequest());
 			$e->setFailedRules(array('blocked'));
-			$this->blockAction($e);
+			$this->dispatchBlockAction('blockAction', $e);
 		}
 
 		try {
 			$this->eventBus->beforeRunRules();
-			$this->runRules();
+			if ($rulesAvailable) {
+				$this->runRules();
+			}
 			$this->eventBus->afterRunRules();
 
 		} catch (wfWAFAllowException $e) {
 			// Do nothing
-			$this->eventBus->allow($ip, $e);
+			wfWAFRuntimeHealth::outcome('allowed');
+			$this->runMaintenance('allow-notification', array($this->eventBus, 'allow'), array($ip, $e));
 
 		} catch (wfWAFBlockException $e) {
 			$this->notifyBlockEvent('block', $ip, $e);
-			$this->blockAction($e);
+			$this->dispatchBlockAction('blockAction', $e);
 
 		} catch (wfWAFBlockXSSException $e) {
 			$this->notifyBlockEvent('blockXSS', $ip, $e);
-			$this->blockXSSAction($e);
+			$this->dispatchBlockAction('blockXSSAction', $e);
 
 		} catch (wfWAFBlockSQLiException $e) {
 			$this->notifyBlockEvent('blockSQLi', $ip, $e);
-			$this->blockAction($e);
+			$this->dispatchBlockAction('blockAction', $e);
 			
 		}
 
-		$this->runCron();
-		$this->repairCron();
+		if (wfWAFRuntimeHealth::snapshot()['outcome'] === 'incomplete' && $rulesAvailable) {
+			wfWAFRuntimeHealth::outcome($this->runtimeLearningMode ? 'learning' : 'evaluated');
+		}
+		$this->runMaintenance('cron', array($this, 'runCron'));
+		$this->runMaintenance('cron-repair', array($this, 'repairCron'));
 
 		// Check if this is signed request and update ruleset.
 
-		$ping = $this->getRequest()->getBody('ping256');
-		$pingResponse = $this->getRequest()->getBody('ping_response');
+		try {
+			$ping = $this->getRequest()->getBody('ping256');
+			$pingResponse = $this->getRequest()->getBody('ping_response');
 
-		if ($ping && $pingResponse &&
-			$this->verifyPing($ping) &&
-			$this->verifySignedRequest($this->getRequest()->getBody('signature256'), $this->getStorageEngine()->getConfig('apiKey', null, 'synced'))
-		) {
-			// $this->updateRuleSet(base64_decode($this->getRequest()->body('ping')));
-			$event = new wfWAFCronFetchRulesEvent(time() - 2);
-			$event->setWaf($this);
-			$event->fire();
+			if ($ping && $pingResponse &&
+				$this->verifyPing($ping) &&
+				$this->verifySignedRequest($this->getRequest()->getBody('signature256'), $this->getStorageEngine()->getConfig('apiKey', null, 'synced'))
+			) {
+				// $this->updateRuleSet(base64_decode($this->getRequest()->body('ping')));
+				$event = new wfWAFCronFetchRulesEvent(time() - 2);
+				$event->setWaf($this);
+				$updated = $event->fire();
+				if ($updated === false) {
+					throw new RuntimeException('Signed rule update failed');
+				}
 
-			header('Content-type: text/plain');
-			$pingResponse = preg_replace('/[a-zA-Z0-9]/', '', $this->getRequest()->getBody('ping_response'));
-			exit('Success: ' . hash('sha256', $this->getStorageEngine()->getConfig('apiKey', null, 'synced') . $pingResponse));
+				header('Content-type: text/plain');
+				$pingResponse = preg_replace('/[a-zA-Z0-9]/', '', $this->getRequest()->getBody('ping_response'));
+				$response = 'Success: ' . hash('sha256', $this->getStorageEngine()->getConfig('apiKey', null, 'synced') . $pingResponse);
+				wfWAFRuntimeHealth::flush();
+				exit($response);
+			}
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('signed-update');
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('signed-update');
 		}
 	}
 
 	/**
-	 *
+	 * Loads compiled rules, restoring temporary reporting settings and releasing file resources.
+	 * @return void
 	 */
 	public function loadRules() {
 		$storageEngine = $this->getStorageEngine();
 		if ($storageEngine instanceof wfWAFStorageFile) {
-			$logLevel = error_reporting();
-			if (wfWAFUtils::isCli()) { //Done to suppress errors from WP-CLI when the WAF is run on environments that have a server level constant to use the MySQLi storage engine that is not in place when running from the CLI
-				error_reporting(0); 
-			}
-			
-			// Acquire lock on this file so we're not including it while it's being written in another process.
-			$handle = fopen($storageEngine->getRulesFile(), 'r');
-			$locked = $handle !== false && flock($handle, LOCK_SH);
-			/** @noinspection PhpIncludeInspection */
-			include $storageEngine->getRulesFile();
-			if ($locked)
-				flock($handle, LOCK_UN);
-			if ($handle !== false)
-				fclose($handle);
-			
-			if (wfWAFUtils::isCli()) {
-				error_reporting($logLevel);
-			}
-		} else {
+			$this->loadFileRules($storageEngine->getRulesFile());
+		}
+		else {
 			$wafRules = $storageEngine->getRules();
 			if (is_array($wafRules)) {
 				if (array_key_exists('rules', $wafRules)) {
@@ -365,25 +459,155 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 					}
 				}
 			}
+			$this->validateLoadedRules();
 		}
-		if ( !defined( 'WFWAF_RULES_LOADED' ) ) {
-			define( 'WFWAF_RULES_LOADED', true );
+		if (!defined('WFWAF_RULES_LOADED')) {
+			define('WFWAF_RULES_LOADED', true);
 		}
 	}
 
+	/**
+	 * Retry file inclusion and validation without rejecting usable cached bytecode.
+	 *
+	 * @param string $rulesPath Compiled rules path.
+	 * @return void
+	 * @throws Exception|Throwable When every attempt fails.
+	 */
+	private function loadFileRules($rulesPath) {
+		$failure = null;
+		for ($attempt = 0; $attempt < 3; $attempt++) {
+			if ($attempt > 0) {
+				clearstatcache(true, $rulesPath);
+				usleep($attempt * 10000);
+			}
+			$this->rules = array();
+			$this->failScores = $this->variables = $this->whitelistedParams = $this->blacklistedParams = array();
+			$loaded = false;
+			$suppressErrors = wfWAFUtils::isCli();
+			$logLevel = error_reporting();
+			if ($suppressErrors) { // Suppress WP-CLI errors when server-level MySQLi settings are unavailable.
+				error_reporting(0);
+			}
+			try {
+				$handle = false;
+				$locked = false;
+				try {
+					// Atomic replacement normally keeps compiled rules complete; locking is best effort.
+					try {
+						$handle = @fopen($rulesPath, 'r');
+						if ($handle !== false) {
+							$locked = @flock($handle, LOCK_SH);
+						}
+					}
+					catch (Exception $e) {
+					}
+					catch (Throwable $e) {
+					}
+					/** @noinspection PhpIncludeInspection */
+					try {
+						$included = wfWAFFileReadDiagnostics::capture('include', function () use ($rulesPath) {
+							return include $rulesPath;
+						});
+					}
+					catch (wfWAFFileReadWarning $e) {
+						throw new wfWAFBuildRulesException('Compiled WAF rules could not be loaded.', 1001, $e);
+					}
+					if ($included === false) {
+						throw new wfWAFBuildRulesException('Compiled WAF rules could not be loaded.', 1001);
+					}
+					$this->validateLoadedRules();
+					$loaded = true;
+				}
+				finally {
+					try {
+						if ($locked) {
+							try {
+								@flock($handle, LOCK_UN);
+							}
+							catch (Exception $e) {
+							}
+							catch (Throwable $e) {
+							}
+						}
+					}
+					finally {
+						if (is_resource($handle)) {
+							try {
+								@fclose($handle);
+							}
+							catch (Exception $e) {
+							}
+							catch (Throwable $e) {
+							}
+						}
+					}
+				}
+			}
+			catch (Exception $e) {
+				$failure = $e;
+			}
+			catch (Throwable $e) {
+				$failure = $e;
+			}
+			finally {
+				if ($suppressErrors) {
+					error_reporting($logLevel);
+				}
+			}
+			// Return after nested cleanup; PHP 7.0 can lose a return inside these finally blocks.
+			if ($loaded) {
+				return;
+			}
+		}
+		$this->rules = array();
+		$this->failScores = $this->variables = $this->whitelistedParams = $this->blacklistedParams = array();
+		// Cached setup placeholders can remain empty after rules are installed.
+		if (!($failure instanceof wfWAFBuildRulesException && $failure->getCode() === 1002)) {
+			wfWAFFileReadDiagnostics::report($rulesPath, 'rules inclusion or validation', 'Compiled WAF rules could not be loaded or validated.', $failure);
+		}
+		throw $failure;
+	}
+
+	/**
+	 * Require a nonempty set of valid rules while protection is enabled.
+	 *
+	 * @return void
+	 * @throws wfWAFBuildRulesException When the loaded rules are unusable.
+	 */
+	private function validateLoadedRules() {
+		if (!$this->isDisabled()) {
+			if (!is_array($this->rules) || !$this->rules) {
+				throw new wfWAFBuildRulesException('No usable WAF rules were loaded.', 1002);
+			}
+			foreach ($this->rules as $rule) {
+				if (!($rule instanceof wfWAFRule)) {
+					throw new wfWAFBuildRulesException('Invalid compiled WAF rule.');
+				}
+			}
+		}
+	}
+
+	/**
+	 * Report an isolated rule failure without interrupting subsequent rules.
+	 *
+	 * @param wfWAFRule $rule Rule.
+	 * @param Exception|Throwable $cause Cause.
+	 * @return void
+	 */
 	private function handleRuleFailure($rule, $cause) {
-		global $wf_waf_failure;
-		error_log("An unexpected error occurred while processing WAF rule " . $rule->getRuleID() . ": {$cause}");
-		$wf_waf_failure = [
-			'rule_id' => $rule->getRuleID(),
-			'throwable' => $cause
-		];
+		wfWAFRuntimeHealth::failure('rule-evaluation', 'rule-failed', $cause);
+		$GLOBALS['wf_waf_failure'] = array('throwable' => new RuntimeException('WAF rule evaluation failed'), 'rule_id' => (int) $rule->getRuleID());
 	}
 
 	/**
 	 * @throws wfWAFAllowException|wfWAFBlockException|wfWAFBlockXSSException
 	 */
 	public function runRules() {
+		$metadata = $this->getRequest()->getMetadata();
+		unset($metadata['sqliInspectionLimit'], $metadata['sqliInspectionReason']);
+		$this->getRequest()->setMetadata($metadata);
+		$this->sqliBudget = new wfWAFSQLiBudget();
+		$this->sqliLimitLogged = false;
 		global $wf_waf_failure;
 		/**
 		 * @var int $ruleID
@@ -406,6 +630,7 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 			}
 		}
 
+		wfWAFRuntimeHealth::complete('rule-evaluation');
 		$blockActions = array();
 		foreach ($this->failedRules as $paramKey => $categories) {
 			foreach ($categories as $category => $failedRules) {
@@ -431,7 +656,7 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 						}
 						$this->scores[$paramKey][$category] += $score;
 						if ($this->scores[$paramKey][$category] >= $this->failScores[$category]) {
-							$blockActions[$category] = array(
+							$blockActions[$category][$paramKey] = array(
 								'paramKey'         => $paramKey,
 								'score'            => $this->scores[$paramKey][$category],
 								'action'           => $action,
@@ -449,10 +674,96 @@ auEa+7b+FGTKs7dUo2BNGR7OVifK4GZ8w/ajS0TelhrSRi3BBQCGXLzUO/UURUAh
 			}
 		}
 
-		uasort($blockActions, array($this, 'sortBlockActions'));
-		foreach ($blockActions as $blockAction) {
+		$sortedBlockActions = array();
+		foreach ($blockActions as $categoryActions) {
+			foreach ($categoryActions as $blockAction) {
+				$sortedBlockActions[] = $blockAction;
+			}
+		}
+		uasort($sortedBlockActions, array($this, 'sortBlockActions'));
+		foreach ($sortedBlockActions as $blockAction) {
 			call_user_func(array($this, $blockAction['action']), $blockAction['rule'], $blockAction['failedComparison'], false);
 		}
+	}
+
+	/**
+	 * Execute optional work without misclassifying it as a protection failure.
+	 *
+	 * @param string $component Identifier.
+	 * @param callable $callback Work.
+	 * @param array $arguments Arguments.
+	 * @return void
+	 */
+	protected function runMaintenance($component, $callback, $arguments = array()) {
+		try {
+			call_user_func_array($callback, $arguments);
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure($component);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure($component);
+		}
+	}
+
+	/**
+	 * Determine whether a selected action enforces protection. WordPress overrides learning policy.
+	 *
+	 * @param wfWAFRunException $exception Decision.
+	 * @return bool
+	 */
+	protected function shouldEnforceBlock($exception) {
+		return !$this->runtimeLearningMode || in_array('blocked', (array) $exception->getFailedRules(), true) || (bool) $exception->getRequest()->getMetadata('finalAction');
+	}
+
+	/**
+	 * Contain failures in subclass handlers before they reach the protected parent response.
+	 *
+	 * @param string $method Handler.
+	 * @param wfWAFRunException $exception Decision.
+	 * @return void
+	 */
+	protected function dispatchBlockAction($method, $exception) {
+		$enforce = true;
+		try {
+			$enforce = $this->shouldEnforceBlock($exception);
+			$this->$method($exception);
+			wfWAFRuntimeHealth::complete('block-handler');
+			return;
+		}
+		catch (wfWAFAllowException $e) {
+			wfWAFRuntimeHealth::outcome('allowed');
+			return;
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $e, false);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure('block-handler', 'handler-failed', $e, false);
+		}
+		if ($enforce) {
+			$this->sendEmergencyBlockResponse();
+		}
+		wfWAFRuntimeHealth::outcome('learning');
+	}
+
+	/**
+	 * Terminate an enforcing request without storage, translation, or subclass dependencies.
+	 *
+	 * @return void
+	 */
+	final protected function sendEmergencyBlockResponse() {
+		wfWAFRuntimeHealth::outcome('blocked');
+		try {
+			@header('HTTP/1.0 403 Forbidden');
+			@header('Content-Type: text/plain; charset=UTF-8');
+			@header('Cache-Control: no-store');
+		}
+		catch (Exception $e) {
+		}
+		catch (Throwable $e) {
+		}
+		exit('Forbidden');
 	}
 
 	/**
@@ -1148,6 +1459,41 @@ HTML
 	}
 
 	/**
+	 * Count SQLi prefilter matches without retaining every match in memory.
+	 * @param wfWAFRule $rule Rule being evaluated.
+	 * @param string $paramKey Inspected parameter key.
+	 * @param string $value Complete parameter value.
+	 * @param string $pattern SQLi prefilter expression.
+	 * @return array|false Exact count and first match, or false in learning mode after exhaustion.
+	 * @throws wfWAFBlockSQLiException
+	 */
+	public function matchSQLiRegex($rule, $paramKey, $value, $pattern) {
+		if ($this->sqliLimitLogged) {
+			return false;
+		}
+		if ($this->sqliBudget === null) {
+			$this->sqliBudget = new wfWAFSQLiBudget();
+		}
+		try {
+			$this->sqliBudget->scanValue($value);
+			$count = @preg_match_all($pattern, $value);
+			if ($count === false) {
+				throw new wfWAFSQLiLimitException('prefilter_error');
+			}
+			$matches = null;
+			if ($count > 0 && @preg_match($pattern, $value, $matches) !== 1) {
+				throw new wfWAFSQLiLimitException('prefilter_error');
+			}
+			return array('count' => $count, 'matches' => $matches);
+		}
+		catch (wfWAFSQLiLimitException $limit) {
+			$failure = new wfWAFRuleComparisonFailure($paramKey, $value, $pattern, 'matchCount');
+			$this->handleSQLiLimit($rule, $failure, $limit);
+			return false;
+		}
+	}
+
+	/**
 	 * @param wfWAFRule $rule
 	 * @param wfWAFRuleComparisonFailure $failedComparison
 	 * @param bool $updateFailedRules
@@ -1155,7 +1501,36 @@ HTML
 	 */
 	public function blockSQLi($rule, $failedComparison, $updateFailedRules = true) {
 		// Verify the param looks like SQLi to help reduce false positives.
-		if (!wfWAFSQLiParser::testForSQLi($failedComparison->getParamValue())) {
+		if ($this->sqliBudget === null) {
+			$this->sqliBudget = new wfWAFSQLiBudget();
+		}
+		if ($this->sqliLimitLogged) {
+			return;
+		}
+		try {
+			$paramValue = $failedComparison->getParamValue();
+			$lexerErrorPrefix = null;
+			$result = wfWAFSQLiParser::testForSQLi($paramValue, $this->sqliBudget, $lexerErrorPrefix);
+			if ($result === null) {
+				$retryPrefix = null;
+				$result = wfWAFSQLiParser::testForSQLi(wfWAFSQLiParser::stripOrdinaryComments($paramValue), $this->sqliBudget, $retryPrefix);
+				if ($result === null) {
+					$paramKey = $failedComparison->getParamKey();
+					$category = $rule->getCategory();
+					$threshold = isset($this->failScores[$category]) ? $this->failScores[$category] : 100;
+					$prefix = $retryPrefix !== null ? $retryPrefix : $lexerErrorPrefix;
+					$result = isset($this->scores[$paramKey][$category])
+						&& $this->scores[$paramKey][$category] >= $threshold
+						&& $prefix !== null
+						&& wfWAFSQLiParser::testForSQLi($prefix, $this->sqliBudget) === true;
+				}
+			}
+			if ($result !== true) {
+				return;
+			}
+		}
+		catch (wfWAFSQLiLimitException $limit) {
+			$this->handleSQLiLimit($rule, $failedComparison, $limit);
 			return;
 		}
 
@@ -1175,6 +1550,46 @@ HTML
 		$e->setParamValue($failedComparison->getParamValue());
 		$e->setRequest($this->getRequest());
 		throw $e;
+	}
+
+	/**
+	 * Block inspection exhaustion, or record it without learning an allowlist entry.
+	 * @param wfWAFRule $rule Qualifying SQLi rule.
+	 * @param wfWAFRuleComparisonFailure $failedComparison Triggering parameter.
+	 * @param wfWAFSQLiLimitException $limit Exhausted inspection limit.
+	 * @return void
+	 * @throws wfWAFBlockSQLiException
+	 */
+	private function handleSQLiLimit($rule, $failedComparison, $limit) {
+		$metadata = $this->getRequest()->getMetadata();
+		$metadata['sqliInspectionLimit'] = $limit->getLimit();
+		$metadata['sqliInspectionReason'] = 'SQLi inspection limit exceeded';
+		$this->getRequest()->setMetadata($metadata);
+		$limitRule = clone $rule;
+		$limitRule->setDescription(wfWAFI18n::__('SQLi inspection limit exceeded', 'wordfence') . ': ' . $limit->getLimit());
+		$limitRule->setWhitelist(false);
+
+		if ($this->isInLearningMode()) {
+			$this->sqliLimitLogged = true;
+			// No failedRules entry: exhaustion must never teach an allowlist exception.
+			try {
+				$this->recordLogEvent(new wfWAFLogEvent(array($limitRule), $failedComparison->getParamKey(), $failedComparison->getParamValue(), $this->getRequest()));
+			}
+			catch (Exception $failure) {
+				$this->reportBlockAuxiliaryFailure('SQLi limit logging', $failure);
+			}
+			catch (Throwable $failure) {
+				$this->reportBlockAuxiliaryFailure('SQLi limit logging', $failure);
+			}
+			return;
+		}
+
+		$exception = new wfWAFBlockSQLiException($limit->getMessage());
+		$exception->setFailedRules(array($limitRule));
+		$exception->setParamKey($failedComparison->getParamKey());
+		$exception->setParamValue($failedComparison->getParamValue());
+		$exception->setRequest($this->getRequest());
+		throw $exception;
 	}
 
 	/**
@@ -1294,6 +1709,9 @@ HTML
 	 * @return void
 	 */
 	protected function sendBlockResponse($exception, $httpCode, $redirect, $template = null) {
+		wfWAFRuntimeHealth::complete('block-handler');
+		wfWAFRuntimeHealth::complete('block-response');
+		wfWAFRuntimeHealth::outcome('blocked');
 		if ($redirect) {
 			$this->sendBlockRedirect($redirect);
 		}
@@ -1446,6 +1864,7 @@ HTML
 	 * @return void
 	 */
 	protected function reportBlockAuxiliaryFailure($operation, $failure) {
+		wfWAFRuntimeHealth::failure('block-response', 'auxiliary-failed', $failure, false);
 		try {
 			error_log('A WAF block was enforced, but ' . $operation . ' failed (' . get_class($failure) . ').');
 		}
@@ -1459,7 +1878,7 @@ HTML
 	
 	public function logAction($event) {
 		$failedRules = array_merge(array('logged'), $event->getFailedRules());
-		$this->getStorageEngine()->logAttack($failedRules, $event->getParamKey(), $event->getParamValue(), $this->getRequest());
+		$this->getStorageEngine()->logAttack($failedRules, $event->getParamKey(), $event->getParamValue(), $this->getRequest(), $this->getRequest()->getMetadata());
 	}
 
 	/**
@@ -1536,6 +1955,9 @@ HTML
 					 * @var wfWAFRuleComparisonFailure $failedComparison
 					 */
 					$rule = $failedRule['rule'];
+					if (($this->sqliLimitLogged || ($this->sqliBudget !== null && $this->sqliBudget->getLimit() !== null)) && $failedRule['action'] === 'blockSQLi') {
+						continue;
+					}
 					if ($rule->getWhitelist()) {
 						$failedComparison = $failedRule['failedComparison'];
 
@@ -1974,6 +2396,8 @@ HTML
 	 * @param wfWAFRequestInterface $request
 	 */
 	public function setRequest($request) {
+		$this->sqliBudget = null;
+		$this->sqliLimitLogged = false;
 		$this->request = $request;
 	}
 
@@ -2151,11 +2575,15 @@ abstract class wfWAFCronEvent {
 }
 
 class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
+	const MAX_RULES_INTERVAL = 604800;
+	const MIN_FAILURE_RETRY = 3600;
 
 	/**
 	 * @var wfWAFHTTPResponse
 	 */
 	private $response;
+	private $rulesResponse;
+	private $rulesUpdateSucceeded = false;
 	private $forceUpdate;
 
 	public function __construct($fireTime, $forceUpdate = false) {
@@ -2169,6 +2597,8 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 			return false;
 		}
 		
+		$this->rulesUpdateSucceeded = false;
+		$this->rulesResponse = null;
 		$success = true;
 		$guessSiteURL = sprintf('%s://%s/', $waf->getRequest()->getProtocol(), $waf->getRequest()->getHost());
 		try {
@@ -2181,37 +2611,52 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 				'lang' => $waf->getStorageEngine()->getConfig('WPLANG', null, 'synced'),
 				'waf_version' => $waf->getVersion()
 			);
-			$lastRuleHash=$this->forceUpdate ? null : $waf->getStorageEngine()->getConfig('lastRuleHash', null, 'transient');
-			if($lastRuleHash!==null)
-				$payload['hash']=$lastRuleHash;
+			// A surviving hash cannot validate missing local rules during recovery.
+			$rulesAvailable = !$waf->getStorageEngine()->needsInitialRules();
+			if ($waf->getStorageEngine() instanceof wfWAFStorageFile) {
+				$rulesFile = $waf->getStorageEngine()->getRulesFile();
+				$rulesAvailable = is_file($rulesFile) && is_readable($rulesFile) && filesize($rulesFile) > 0;
+			}
+			$lastRuleHash = ($this->forceUpdate || !$rulesAvailable) ? null :
+				$waf->getStorageEngine()->getConfig('lastRuleHash', null, 'transient');
+			if (is_string($lastRuleHash) && $lastRuleHash !== '') {
+				$payload['hash'] = $lastRuleHash;
+			}
 			if ($waf->getStorageEngine()->getConfig('other_WFNet', true, 'synced')) {
 				$payload['disabled'] = implode('|', $waf->getDisabledRuleIDs());
 			}
 			
-			$this->response = wfWAFHTTP::get(WFWAF_API_URL_SEC . "?" . http_build_query($payload, '', '&'), null, 10, 5);
-			if ($this->response) {
-				if($this->response->getStatusCode() !== 304){
+			$this->rulesResponse = $this->response = wfWAFHTTP::get(WFWAF_API_URL_SEC . "?" . http_build_query($payload, '', '&'), null, 10, 5);
+			if ($this->response && in_array($this->response->getStatusCode(), array(200, 304), true)) {
+				if ($this->response->getStatusCode() === 304) {
+					$success = isset($payload['hash']) && $rulesAvailable;
+				}
+				else {
 					$jsonData = wfWAFUtils::json_decode($this->response->getBody(), true);
-					if (is_array($jsonData)) {
+					if (is_array($jsonData) && isset($jsonData['data']) && is_array($jsonData['data'])) {
 
 						if ($waf->hasOpenSSL() &&
-							isset($jsonData['data']['signature256']) &&
-							isset($jsonData['data']['rules']) &&
-							$waf->verifySignedRequest(base64_decode($jsonData['data']['signature256']), $jsonData['data']['rules'])
+							isset($jsonData['data']['signature256']) && is_string($jsonData['data']['signature256']) &&
+							isset($jsonData['data']['rules']) && is_string($jsonData['data']['rules']) &&
+							base64_decode($jsonData['data']['rules'], true) !== false &&
+							base64_decode($jsonData['data']['signature256'], true) !== false &&
+							$waf->verifySignedRequest(base64_decode($jsonData['data']['signature256'], true), $jsonData['data']['rules'])
 						) {
-							$waf->updateRuleSet(base64_decode($jsonData['data']['rules']),
+							$waf->updateRuleSet(base64_decode($jsonData['data']['rules'], true),
 								isset($jsonData['data']['timestamp']) ? $jsonData['data']['timestamp'] : true);
 							$waf->getStorageEngine()->setConfig('lastRuleHash', $jsonData['data']['signature256'], 'transient');
 							if (array_key_exists('premiumCount', $jsonData['data'])) {
 								$waf->getStorageEngine()->setConfig('premiumCount', $jsonData['data']['premiumCount'], 'transient');
 							}
 
-						} else if (!$waf->hasOpenSSL() &&
-							isset($jsonData['data']['hash']) &&
-							isset($jsonData['data']['rules']) &&
+						}
+						else if (!$waf->hasOpenSSL() &&
+							isset($jsonData['data']['hash']) && is_string($jsonData['data']['hash']) &&
+							isset($jsonData['data']['rules']) && is_string($jsonData['data']['rules']) &&
+							base64_decode($jsonData['data']['rules'], true) !== false &&
 							$waf->verifyHashedRequest($jsonData['data']['hash'], $jsonData['data']['rules'])
 						) {
-							$waf->updateRuleSet(base64_decode($jsonData['data']['rules']),
+							$waf->updateRuleSet(base64_decode($jsonData['data']['rules'], true),
 								isset($jsonData['data']['timestamp']) ? $jsonData['data']['timestamp'] : true);
 							$waf->getStorageEngine()->setConfig('lastRuleHash', $jsonData['data']['hash'], 'transient');
 							if (array_key_exists('premiumCount', $jsonData['data'])) {
@@ -2231,6 +2676,11 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 				$success = false;
 			}
 
+			if ($success) {
+				$this->rulesUpdateSucceeded = true;
+				$this->scheduleNextRulesUpdate();
+			}
+
 			$lastMalwareSignatureUpdate=$waf->getStorageEngine()->getConfig('signaturesLastUpdated', 0, 'transient');
 			$isPaid=$waf->getStorageEngine()->getConfig('isPaid', false, 'synced');
 			//Only update malware signatures for free sites if they are older than 3 days plus an hour
@@ -2245,38 +2695,52 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 						'cs-hash'  => $this->forceUpdate ? null : $waf->getStorageEngine()->getConfig('lastMalwareHashCommonStrings', null, 'transient'),
 						'lang'   => $waf->getStorageEngine()->getConfig('WPLANG', null, 'synced')
 					), '', '&'), null, 15, 5);
-				if ($this->response) {
-					if($this->response->getStatusCode() !== 304){
+				if ($this->response && in_array($this->response->getStatusCode(), array(200, 304), true)) {
+					if ($this->response->getStatusCode() === 200) {
 						$jsonData = wfWAFUtils::json_decode($this->response->getBody(), true);
-						if (is_array($jsonData)) {
+						if (is_array($jsonData) && isset($jsonData['data']) && is_array($jsonData['data'])) {
 							if ($waf->hasOpenSSL() &&
-								isset($jsonData['data']['signature256']) &&
-								isset($jsonData['data']['signatures']) &&
-								$waf->verifySignedRequest(base64_decode($jsonData['data']['signature256']), $jsonData['data']['signatures'])
+								isset($jsonData['data']['signature256']) && is_string($jsonData['data']['signature256']) &&
+								isset($jsonData['data']['signatures']) && is_string($jsonData['data']['signatures']) &&
+								base64_decode($jsonData['data']['signature256'], true) !== false &&
+								base64_decode($jsonData['data']['signatures'], true) !== false &&
+								is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'], true))) &&
+								$waf->verifySignedRequest(base64_decode($jsonData['data']['signature256'], true), $jsonData['data']['signatures'])
 							) {
-								$waf->setMalwareSignatures(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'])),
+								$waf->setMalwareSignatures(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'], true)),
 									isset($jsonData['data']['timestamp']) ? $jsonData['data']['timestamp'] : true);
 								$waf->getStorageEngine()->setConfig('lastMalwareHash', $jsonData['data']['signature256'], 'transient');
 								if (array_key_exists('premiumCount', $jsonData['data'])) {
 									$waf->getStorageEngine()->setConfig('signaturePremiumCount', $jsonData['data']['premiumCount'], 'transient');
 								}
 
-								if (array_key_exists('commonStringsSignature256', $jsonData['data']) && 
-									array_key_exists('commonStrings', $jsonData['data']) && 
-									array_key_exists('signatureIndexes', $jsonData['data']) &&
-									$waf->verifySignedRequest(base64_decode($jsonData['data']['commonStringsSignature256']), $jsonData['data']['commonStrings'] . $jsonData['data']['signatureIndexes'])
+								if (isset($jsonData['data']['commonStringsSignature256'], $jsonData['data']['commonStrings'], $jsonData['data']['signatureIndexes']) &&
+									is_string($jsonData['data']['commonStringsSignature256']) &&
+									is_string($jsonData['data']['commonStrings']) &&
+									is_string($jsonData['data']['signatureIndexes']) &&
+									base64_decode($jsonData['data']['commonStringsSignature256'], true) !== false &&
+									base64_decode($jsonData['data']['commonStrings'], true) !== false &&
+									base64_decode($jsonData['data']['signatureIndexes'], true) !== false &&
+									is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'], true))) &&
+									is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'], true))) &&
+									$waf->verifySignedRequest(base64_decode($jsonData['data']['commonStringsSignature256'], true), $jsonData['data']['commonStrings'] . $jsonData['data']['signatureIndexes'])
 								) {
-									$waf->setMalwareSignatureCommonStrings(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'])), wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'])));
+									$waf->setMalwareSignatureCommonStrings(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'], true)), wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'], true)));
 
 									$waf->getStorageEngine()->setConfig('lastMalwareHashCommonStrings', $jsonData['data']['commonStringsSignature256'], 'transient');
 								}
+								else if (array_key_exists('commonStringsSignature256', $jsonData['data']) || array_key_exists('commonStrings', $jsonData['data']) || array_key_exists('signatureIndexes', $jsonData['data'])) {
+									$success = false;
+								}
 
 							} else if (!$waf->hasOpenSSL() &&
-								isset($jsonData['data']['hash']) &&
-								isset($jsonData['data']['signatures']) &&
+								isset($jsonData['data']['hash']) && is_string($jsonData['data']['hash']) &&
+								isset($jsonData['data']['signatures']) && is_string($jsonData['data']['signatures']) &&
+								base64_decode($jsonData['data']['signatures'], true) !== false &&
+								is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'], true))) &&
 								$waf->verifyHashedRequest($jsonData['data']['hash'], $jsonData['data']['signatures'])
 							) {
-								$waf->setMalwareSignatures(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'])),
+								$waf->setMalwareSignatures(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatures'], true)),
 
 									isset($jsonData['data']['timestamp']) ? $jsonData['data']['timestamp'] : true);
 								$waf->getStorageEngine()->setConfig('lastMalwareHash', $jsonData['data']['hash'], 'transient');
@@ -2284,13 +2748,21 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 									$waf->getStorageEngine()->setConfig('signaturePremiumCount', $jsonData['data']['premiumCount'], 'transient');
 								}
 
-								if (array_key_exists('commonStringsHash', $jsonData['data']) &&
-									array_key_exists('commonStrings', $jsonData['data']) &&
-									array_key_exists('signatureIndexes', $jsonData['data']) &&
+								if (isset($jsonData['data']['commonStringsHash'], $jsonData['data']['commonStrings'], $jsonData['data']['signatureIndexes']) &&
+									is_string($jsonData['data']['commonStringsHash']) &&
+									is_string($jsonData['data']['commonStrings']) &&
+									is_string($jsonData['data']['signatureIndexes']) &&
+									base64_decode($jsonData['data']['commonStrings'], true) !== false &&
+									base64_decode($jsonData['data']['signatureIndexes'], true) !== false &&
+									is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'], true))) &&
+									is_array(wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'], true))) &&
 									$waf->verifyHashedRequest($jsonData['data']['commonStringsHash'], $jsonData['data']['commonStrings'] . $jsonData['data']['signatureIndexes'])
 								) {
-									$waf->setMalwareSignatureCommonStrings(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'])), wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'])));
+									$waf->setMalwareSignatureCommonStrings(wfWAFUtils::json_decode(base64_decode($jsonData['data']['commonStrings'], true)), wfWAFUtils::json_decode(base64_decode($jsonData['data']['signatureIndexes'], true)));
 									$waf->getStorageEngine()->setConfig('lastMalwareHashCommonStrings', $jsonData['data']['commonStringsHash'], 'transient');
+								}
+								else if (array_key_exists('commonStringsHash', $jsonData['data']) || array_key_exists('commonStrings', $jsonData['data']) || array_key_exists('signatureIndexes', $jsonData['data'])) {
+									$success = false;
 								}
 							}
 							else {
@@ -2306,36 +2778,120 @@ class wfWAFCronFetchRulesEvent extends wfWAFCronEvent {
 					$success = false;
 				}
 			}
-		} catch (wfWAFHTTPTransportException $e) {
-			error_log($e->getMessage());
+		}
+		catch (wfWAFHTTPTransportException $e) {
 			$success = false;
-		} catch (wfWAFBuildRulesException $e) {
-			error_log($e->getMessage());
+		}
+		catch (wfWAFBuildRulesException $e) {
 			$success = false;
 		}
 		
-		if ($success) {
-			$waf->getStorageEngine()->setConfig('lastRuleUpdateCheck', time(), 'transient');
+		if (!$success) {
+			wfWAFRuntimeHealth::reportMaintenanceFailure('rule-refresh');
 		}
 		
 		return $success;
 	}
 
+	/**
+	 * Persist the next rules check before another request can fail or terminate.
+	 * Uses only the accepted rules response, before the malware request replaces it.
+	 * @return void
+	 */
+	private function scheduleNextRulesUpdate() {
+		$storage = $this->getWaf()->getStorageEngine();
+		$expires = null;
+		$checkedAt = time();
+		$headers = $this->response->getHeaders();
+		if (is_string($headers)) {
+			// Both built-in transports return raw headers. Only use the final response block.
+			$parsed = array();
+			foreach (preg_split('/\r\n|\n|\r/', $headers) as $line) {
+				if (preg_match('/^HTTP\/\S+\s+[0-9]{3}\b/i', $line)) {
+					$parsed = array();
+					continue;
+				}
+				$parts = explode(':', $line, 2);
+				if (count($parts) === 2) {
+					$parsed[strtolower(trim($parts[0]))] = trim($parts[1]);
+				}
+			}
+			$headers = $parsed;
+		}
+		foreach ((array) $headers as $name => $value) {
+			if (strcasecmp($name, 'Expires') === 0 && is_string($value)) {
+				$timestamp = strtotime($value);
+				if ($timestamp !== false && $timestamp > $checkedAt) {
+					$expires = min($timestamp, $checkedAt + self::MAX_RULES_INTERVAL);
+				}
+				break;
+			}
+		}
+		// Explicitly overwrite cleared expiry so deferred MySQL saves cannot restore it.
+		$storage->setConfig('rulesUpdateExpires', $expires, 'livewaf');
+		$storage->setConfig('rulesUpdateInterval', $expires === null ? null : $expires - $checkedAt, 'livewaf');
+		$storage->setConfig('lastRuleUpdateCheck', $checkedAt, 'transient');
+
+		$cron = (array) $storage->getConfig('cron', array(), 'livewaf');
+		$replacement = $this->reschedule();
+		$replaced = false;
+		foreach ($cron as $index => $event) {
+			if ($event instanceof self) {
+				if (!$replaced) {
+					$cron[$index] = $replacement;
+					$replaced = true;
+				}
+				else {
+					unset($cron[$index]);
+				}
+			}
+		}
+		if (!$replaced) {
+			$cron[] = $replacement;
+		}
+		$storage->setConfig('cron', $cron, 'livewaf');
+		if (method_exists($storage, 'saveConfig')) {
+			$storage->saveConfig('livewaf');
+			$storage->saveConfig('transient');
+		}
+	}
+
+	/**
+	 * Return the accepted server expiry, or the license-based fallback when due.
+	 * @return int|float|null
+	 */
 	public function getNextFireTime() {
 		$waf = $this->getWaf();
 		if (!$waf)
 			return null;
-		if ($this->response) {
-			$headers = $this->response->getHeaders();
-			if (isset($headers['Expires'])) {
-				$timestamp = strtotime($headers['Expires']);
-				// Make sure it's at least 2 hours ahead.
-				if ($timestamp && $timestamp > (time() + 7200)) {
-					return $timestamp;
-				}
-			}
+		$storage = $waf->getStorageEngine();
+		$expires = (int) $storage->getConfig('rulesUpdateExpires', 0, 'livewaf');
+		$lastChecked = (int) $storage->getConfig('lastRuleUpdateCheck', 0, 'transient');
+		$maximumExpiry = ($lastChecked > 0 ? $lastChecked : time()) + self::MAX_RULES_INTERVAL;
+		$expires = min($expires, $maximumExpiry);
+		if ($expires > time()) {
+			return $expires;
 		}
-		return time() + (86400 * ($waf->getStorageEngine()->getConfig('isPaid', null, 'synced') ? .5 : 7));
+		$defaultInterval = 86400 * ($storage->getConfig('isPaid', null, 'synced') ? .5 : 7);
+		$lastInterval = (int) $storage->getConfig('rulesUpdateInterval', 0, 'livewaf');
+		$retryInterval = $lastInterval > 0 ? max(self::MIN_FAILURE_RETRY, min($lastInterval, $defaultInterval)) : $defaultInterval;
+		return time() + $retryInterval;
+	}
+
+	/**
+	 * Whether the rules response succeeded, independently of malware signatures.
+	 * @return bool
+	 */
+	public function didRulesUpdateSucceed() {
+		return $this->rulesUpdateSucceeded;
+	}
+
+	/**
+	 * Return the rules response even when a later malware request replaces it.
+	 * @return wfWAFHTTPResponse|bool|null
+	 */
+	public function getRulesResponse() {
+		return $this->rulesResponse;
 	}
 
 	public function getResponse() {
@@ -2357,6 +2913,7 @@ class wfWAFCronFetchIPListEvent extends wfWAFCronEvent {
 
 class wfWAFCronFetchBlacklistPrefixesEvent extends wfWAFCronEvent {
 	
+	/** Fetches and caches a valid, sorted prefix list while retaining caches on invalid responses. @return void */
 	public function fire() {
 		$waf = $this->getWaf();
 		if (!$waf) {
@@ -2374,16 +2931,42 @@ class wfWAFCronFetchBlacklistPrefixesEvent extends wfWAFCronEvent {
 						'lang'   => $waf->getStorageEngine()->getConfig('WPLANG', null, 'synced'),
 					), '', '&'), $request);
 				
-				if ($response instanceof wfWAFHTTPResponse && $response->getBody()) {
+				if ($response instanceof wfWAFHTTPResponse && (int) $response->getStatusCode() === 200 && $this->isValidPrefixList($response->getBody())) {
 					$waf->getStorageEngine()->setConfig('blockedPrefixes', base64_encode($response->getBody()), 'transient');
 					$waf->getStorageEngine()->setConfig('blacklistAllowedCache', '', 'transient');
 				}
 			}
 			
 			$waf->getStorageEngine()->vacuum();
-		} catch (wfWAFHTTPTransportException $e) {
+		}
+		catch (wfWAFHTTPTransportException $e) {
 			error_log($e->getMessage());
 		}
+	}
+
+	/**
+	 * Validates fixed-width SHA-256 prefixes in nondecreasing binary order.
+	 * @param mixed $prefixList Raw response body.
+	 * @return bool Whether the body is a valid prefix list, including a header-only empty list.
+	 */
+	private function isValidPrefixList($prefixList) {
+		if (!is_string($prefixList) || $prefixList === '') {
+			return false;
+		}
+		$size = ord(wfWAFUtils::substr($prefixList, 0, 1));
+		$length = wfWAFUtils::strlen($prefixList);
+		if ($size < 1 || $size > 32 || ($length - 1) % $size !== 0) {
+			return false;
+		}
+		$previous = null;
+		for ($offset = 1; $offset < $length; $offset += $size) {
+			$current = wfWAFUtils::substr($prefixList, $offset, $size);
+			if ($previous !== null && strcmp($previous, $current) > 0) {
+				return false;
+			}
+			$previous = $current;
+		}
+		return true;
 	}
 
 	public function getNextFireTime() {

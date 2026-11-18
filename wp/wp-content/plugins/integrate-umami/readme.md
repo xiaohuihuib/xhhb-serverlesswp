@@ -2,8 +2,8 @@
 **Contributors:** [ancocodet](https://github.com/Ancocodet) <br>
 **Tags:** analytics,umami <br>
 **Requires at least:** 6.0 <br>
-**Tested up to:** 6.7 <br>
-**Stable tag:** 0.8.3 <br>
+**Tested up to:** 7.1 <br>
+**Stable tag:** 0.9.0 <br>
 **Requires PHP:** 7.4 <br>
 **License:** GPLv3 or later <br>
 **License URI:** https://github.com/Ancocodet/wp-umami/blob/main/LICENSE.md <br>
@@ -31,7 +31,7 @@ Umami is a simple, fast, website analytics tool for those who care about privacy
 
 ### Requirements ###
 * PHP 7.4 or greater
-* WordPress 5.0 or greater
+* WordPress 6.0 or greater
 
 ## Contribute ##
 
@@ -61,6 +61,10 @@ This release fixes an issue with the update from 0.5.0 to 0.6.0. The update proc
 Issues with the settings page were fixed and the overall feeling of the page was improved as well.
 
 ## Changelog ##
+
+- **0.9.0** - Heatmaps<br>
+<br>Added an option to enable the heatmap tracking for the website
+<br><br>
 
 - **0.8.3** - Comment Tracking Fix<br>
 <br>Fixed an issue with the comment tracking

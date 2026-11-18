@@ -73,17 +73,35 @@ class wfRESTConfigController extends wfRESTBaseController {
 		$firewall = new wfFirewall();
 		$wafFields = array(
 			'autoPrepend'                    => $firewall->protectionMode() === wfFirewall::PROTECTION_MODE_EXTENDED,
-			'avoid_php_input'                => wfWAF::getInstance()->getStorageEngine()->getConfig('avoid_php_input', false) ? 1 : 0,
-			'disabledRules'                  => array_keys((array) wfWAF::getInstance()->getStorageEngine()->getConfig('disabledRules')),
-			'ruleCount'                      => count((array) wfWAF::getInstance()->getRules()),
-			'disableWAFBlacklistBlocking'    => wfWAF::getInstance()->getStorageEngine()->getConfig('disableWAFBlacklistBlocking'),
-			'enabled'                        => $firewall->wafStatus() !== wfFirewall::FIREWALL_MODE_DISABLED,
-            'firewallMode'                   => $firewall->firewallMode(),
-			'learningModeGracePeriod'        => wfWAF::getInstance()->getStorageEngine()->getConfig('learningModeGracePeriod'),
-			'learningModeGracePeriodEnabled' => wfWAF::getInstance()->getStorageEngine()->getConfig('learningModeGracePeriodEnabled'),
+			'avoid_php_input'                => 0,
+			'disabledRules'                  => array(),
+			'ruleCount'                      => 0,
+			'disableWAFBlacklistBlocking'    => null,
+			'enabled'                        => false,
+			'firewallMode'                   => wfFirewall::FIREWALL_MODE_DISABLED,
+			'learningModeGracePeriod'        => null,
+			'learningModeGracePeriodEnabled' => null,
 			'subdirectoryInstall'            => $firewall->isSubDirectoryInstallation(),
-			'wafStatus'                      => $firewall->wafStatus(),
+			'wafStatus'                      => 0.0,
 		);
+		try {
+			$wafFields = array(
+				'autoPrepend'                    => $firewall->protectionMode() === wfFirewall::PROTECTION_MODE_EXTENDED,
+				'avoid_php_input'                => wfWAF::getInstance()->getStorageEngine()->getConfig('avoid_php_input', false) ? 1 : 0,
+				'disabledRules'                  => array_keys((array) wfWAF::getInstance()->getStorageEngine()->getConfig('disabledRules')),
+				'ruleCount'                      => count((array) wfWAF::getInstance()->getRules()),
+				'disableWAFBlacklistBlocking'    => wfWAF::getInstance()->getStorageEngine()->getConfig('disableWAFBlacklistBlocking'),
+				'enabled'                        => $firewall->firewallMode() !== wfFirewall::FIREWALL_MODE_DISABLED,
+				'firewallMode'                   => $firewall->firewallMode(),
+				'learningModeGracePeriod'        => wfWAF::getInstance()->getStorageEngine()->getConfig('learningModeGracePeriod'),
+				'learningModeGracePeriodEnabled' => wfWAF::getInstance()->getStorageEngine()->getConfig('learningModeGracePeriodEnabled'),
+				'subdirectoryInstall'            => $firewall->isSubDirectoryInstallation(),
+				'wafStatus'                      => $firewall->wafStatus(),
+			);
+		}
+		catch (wfWAFStorageFileException $e) {
+			// Report an unavailable WAF without interrupting Central's configuration sync.
+		}
 		$lsFields = array(
 			Controller_Settings::OPTION_XMLRPC_ENABLED                   => Controller_Settings::shared()->get(Controller_Settings::OPTION_XMLRPC_ENABLED),
 			Controller_Settings::OPTION_2FA_WHITELISTED                  => Controller_Settings::shared()->get(Controller_Settings::OPTION_2FA_WHITELISTED),
@@ -213,22 +231,24 @@ class wfRESTConfigController extends wfRESTBaseController {
 				$errors = Controller_Settings::shared()->validate_multiple($loginSecurityConfig);
 
 				if ($errors !== true) {
+					foreach ($errors as $key => $error) {
+						if (!is_string($error) || $error === '') {
+							$errors[$key] = __('Errors occurred while saving the configuration.', 'wordfence');
+						}
+					}
 					if (count($errors) == 1) {
 						return new WP_Error('rest_set_config_error',
 							sprintf(
 								/* translators: Error message. */
-								__('An error occurred while saving the configuration: %s', 'wordfence'), $errors[0]['error']),
+								__('An error occurred while saving the configuration: %s', 'wordfence'), reset($errors)),
 							array('status' => 422));
 
-					} else if (count($errors) > 1) {
-						$compoundMessage = array();
-						foreach ($errors as $e) {
-							$compoundMessage[] = $e['error'];
-						}
+					}
+					else if (count($errors) > 1) {
 						return new WP_Error('rest_set_config_error',
 							sprintf(
 								/* translators: Error message. */
-								__('Errors occurred while saving the configuration: %s', 'wordfence'), implode(', ', $compoundMessage)),
+								__('Errors occurred while saving the configuration: %s', 'wordfence'), implode(', ', $errors)),
 							array('status' => 422));
 					}
 
@@ -238,7 +258,12 @@ class wfRESTConfigController extends wfRESTBaseController {
 				}
 
 				try {
-					Controller_Settings::shared()->set_multiple($loginSecurityConfig);
+					// Central has no browser session in which to generate a reCAPTCHA token.
+					if (!Controller_Settings::shared()->set_multiple($loginSecurityConfig, false, array(Controller_Settings::VALIDATION_SKIP_RECAPTCHA => true))) {
+						return new WP_Error('rest_set_config_error',
+							__('Errors occurred while saving the configuration.', 'wordfence'),
+							array('status' => 422));
+					}
 					foreach ($fields as $key => $value) {
 						if (strpos($key, 'wfls_settings_') === 0) {
 							unset($fields[$key]);

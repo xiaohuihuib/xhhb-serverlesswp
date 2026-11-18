@@ -23,53 +23,230 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 		return true;
 	}
 
+	/**
+	 * Replace a file only after verifying the complete temporary contents.
+	 *
+	 * @param string $file Destination.
+	 * @param string $content Bytes.
+	 * @param string $prefix Temporary prefix.
+	 * @return bool Whether written.
+	 */
 	public static function atomicFilePutContents($file, $content, $prefix = 'config') {
-		if (!wfWAFStorageFile::allowFileWriting()) { return false; }
-		
-		$tmpFile = @tempnam(dirname($file), $prefix . '.tmp.');
-		if (!$tmpFile) {
-			$tmpFile = @tempnam(sys_get_temp_dir(), $prefix . '.tmp.');
+		if (!self::allowFileWriting()) {
+			return false;
 		}
-		if (!$tmpFile) {
-			throw new wfWAFStorageFileException('Unable to save temporary file for atomic writing.');
+		$temporary = null;
+		$backup = null;
+		$backupContainsPrevious = false;
+		$handle = false;
+		$locked = false;
+		try {
+			$temporary = tempnam(dirname($file), $prefix . '.tmp.');
+			if (!$temporary || realpath(dirname($temporary)) !== realpath(dirname($file))) {
+				throw new wfWAFStorageFileException('Unable to create a same-directory temporary file.');
 		}
-		$tmpHandle = @fopen($tmpFile, 'w');
-		if (!$tmpHandle) {
-			throw new wfWAFStorageFileException('Unable to save temporary file ' . $tmpFile . ' for atomic writing.');
+			$handle = fopen($temporary, 'w+b');
+			if (!$handle) {
+				throw new wfWAFStorageFileException('Unable to open temporary configuration.');
 		}
-
-		self::lock($tmpHandle, LOCK_EX);
-		fwrite($tmpHandle, $content);
-		fflush($tmpHandle);
-		self::lock($tmpHandle, LOCK_UN);
-		fclose($tmpHandle);
-		chmod($tmpFile, self::permissions()); 
-
-		// Attempt to verify file has finished writing (sometimes the disk will lie for better benchmarks)
-		$tmpContents = file_get_contents($tmpFile);
-		if ($tmpContents !== $content) {
-			throw new wfWAFStorageFileException('Unable to verify temporary file contents for atomic writing.');
+			$locked = self::optionalLock($handle, LOCK_EX);
+			$offset = 0;
+			$length = strlen($content);
+			while ($offset < $length) {
+				$written = fwrite($handle, substr($content, $offset));
+				if (!$written) {
+					throw new wfWAFStorageFileException('Unable to write complete configuration.');
 		}
-
-		if (!@rename($tmpFile, $file)) {
-			$backFile = @tempnam(dirname($file), $prefix . '.bak.');
-			if (!$backFile) {
-				$backFile = @tempnam(sys_get_temp_dir(), $prefix . '.bak.');
+				$offset += $written;
 			}
-			if (!$backFile) {
-				throw new wfWAFStorageFileException('Unable to save temporary file for atomic writing.');
+			// Mandatory locks on Windows and SMB storage prevent reads through a second handle.
+			if (!fflush($handle) || !chmod($temporary, self::permissions()) || !rewind($handle) || stream_get_contents($handle) !== $content) {
+				throw new wfWAFStorageFileException('Unable to verify temporary configuration.');
 			}
-			if (WFWAF_DEBUG) {
-				rename($file, $backFile);
-				rename($tmpFile, $file);
-				unlink($backFile);
-				unlink($tmpFile);
-			} else {
-				@rename($file, $backFile);
-				@rename($tmpFile, $file);
-				@unlink($backFile);
-				@unlink($tmpFile);
+			self::closeOptionalHandle($handle, $locked);
+			$handle = false;
+			$replaced = false;
+			try {
+				$replaced = static::replaceVerifiedFile($temporary, $file);
 			}
+			catch (Exception $e) {
+			}
+			catch (Throwable $e) {
+			}
+			if (!$replaced) {
+				try {
+					$backup = static::reserveReplacementBackup($file);
+				}
+				catch (Exception $e) {
+				}
+				catch (Throwable $e) {
+				}
+				if (!$backup || realpath(dirname($backup)) !== realpath(dirname($file)) || !self::removeFile($backup)) {
+					throw new wfWAFStorageFileException('Unable to reserve a backup for configuration replacement.');
+				}
+				if (!static::moveFile($file, $backup)) {
+					throw new wfWAFStorageFileException('Unable to move the previous configuration to a backup.');
+				}
+				$backupContainsPrevious = true;
+				try {
+					$replaced = static::replaceVerifiedFile($temporary, $file);
+				}
+				catch (Exception $e) {
+				}
+				catch (Throwable $e) {
+				}
+				if (!$replaced) {
+					if (!static::moveFile($backup, $file)) {
+						throw new wfWAFStorageFileException('Unable to replace configuration or restore its backup; the backup was retained at ' . $backup . '.');
+					}
+					$backup = null;
+					$backupContainsPrevious = false;
+					throw new wfWAFStorageFileException('Unable to replace configuration; the previous file was restored.');
+				}
+				self::removeFile($backup);
+				$backup = null;
+				$backupContainsPrevious = false;
+			}
+			$temporary = null;
+			return true;
+		}
+		finally {
+			if (is_resource($handle)) {
+				self::closeOptionalHandle($handle, $locked);
+			}
+			if ($temporary !== null) {
+				try {
+					if (is_file($temporary)) {
+						@unlink($temporary);
+					}
+				}
+				catch (Exception $e) {
+				}
+				catch (Throwable $e) {
+				}
+			}
+			if ($backup !== null && !$backupContainsPrevious) {
+				self::removeFile($backup);
+			}
+		}
+	}
+
+	/**
+	 * Replace verified temporary contents without opening the destination.
+	 *
+	 * @param string $temporary Verified temporary path.
+	 * @param string $file Destination path.
+	 * @return bool Whether replacement succeeded.
+	 */
+	protected static function replaceVerifiedFile($temporary, $file) {
+		return @rename($temporary, $file);
+	}
+
+	/**
+	 * Reserve a unique backup whose PHP denial header remains executable.
+	 * The temporary name supplies uniqueness only and never receives file contents.
+	 *
+	 * @param string $file Destination being replaced.
+	 * @return string Reserved backup path ending in .php.
+	 * @throws wfWAFStorageFileException When a same-directory backup cannot be reserved.
+	 */
+	protected static function reserveReplacementBackup($file) {
+		$reservation = @tempnam(dirname($file), 'wfb');
+		$handle = false;
+		try {
+			if (!$reservation || realpath(dirname($reservation)) !== realpath(dirname($file))) {
+				throw new wfWAFStorageFileException('Unable to reserve a same-directory backup.');
+			}
+			$backup = $file . '.bak.' . basename($reservation) . '.php';
+			$handle = @fopen($backup, 'x+b');
+			if ($handle === false) {
+				throw new wfWAFStorageFileException('Unable to reserve a protected backup.');
+			}
+			return $backup;
+		}
+		finally {
+			if (is_resource($handle)) {
+				self::closeOptionalHandle($handle, false);
+			}
+			if ($reservation) {
+				self::removeFile($reservation);
+			}
+		}
+	}
+
+	/**
+	 * Move a file while containing filesystem warnings converted to exceptions.
+	 *
+	 * @param string $source Source path.
+	 * @param string $destination Destination path.
+	 * @return bool Whether moved.
+	 */
+	protected static function moveFile($source, $destination) {
+		try {
+			return @rename($source, $destination);
+		}
+		catch (Exception $e) {
+			return false;
+		}
+		catch (Throwable $e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Remove a staging file without masking a replacement failure.
+	 *
+	 * @param string $path File path.
+	 * @return bool Whether removed.
+	 */
+	private static function removeFile($path) {
+		try {
+			return @unlink($path);
+		}
+		catch (Exception $e) {
+			return false;
+		}
+		catch (Throwable $e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Attempt a blocking file lock without interrupting protection on failure.
+	 *
+	 * @param resource $handle File handle.
+	 * @param int $operation Lock operation.
+	 * @return bool Whether the lock was acquired.
+	 */
+	private static function optionalLock($handle, $operation) {
+		try {
+			return @flock($handle, $operation);
+		}
+		catch (Exception $e) {
+			return false;
+		}
+		catch (Throwable $e) {
+			return false;
+		}
+	}
+
+	/**
+	 * Release an optional lock and close its handle without masking the original failure.
+	 *
+	 * @param resource $handle File handle.
+	 * @param bool $locked Whether the lock was acquired.
+	 * @return void
+	 */
+	private static function closeOptionalHandle($handle, $locked) {
+		if ($locked) {
+			self::optionalLock($handle, LOCK_UN);
+		}
+		try {
+			@fclose($handle);
+		}
+		catch (Exception $e) {
+		}
+		catch (Throwable $e) {
 		}
 	}
 
@@ -131,6 +308,9 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 	private $rulesDSLCacheFile;
 	private $dataChanged = array();
 	private $data = array();
+	private $freshInstallation;
+	/** @var int|null Active configuration read attempt; null for an explicit open. */
+	private $configReadAttempt;
 	/**
 	 * @var resource[]
 	 */
@@ -153,6 +333,7 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 		$this->setConfigFile($configFile);
 		$this->setRulesFile($rulesFile);
 		$this->setRulesDSLCacheFile($rulesDSLCacheFile);
+		$this->freshInstallation = !is_string($configFile) || (!file_exists($configFile) && !file_exists($this->pathForConfig('synced')));
 	}
 
 	/**
@@ -435,37 +616,128 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 	}
 	
 	private function _open($filePath, &$fileHandle, $arrayKey, $defaultContents, $remakeIfCorrupt = false) {
-		if (!file_exists($filePath)) {
-			@file_put_contents($filePath, $defaultContents, LOCK_EX);
-		}
-		if (wfWAFStorageFile::allowFileWriting()) {
-			@chmod($filePath, self::permissions());
-		}
-		if ($arrayKey !== false) {
-			$fileHandle[$arrayKey] = @fopen($filePath, 'r+');
-			$handle = $fileHandle[$arrayKey];
-		}
-		else {
+		if ($arrayKey === false) {
+			// Mutable IP-cache initialization keeps its existing locking behavior.
+			if (!file_exists($filePath)) {
+				@file_put_contents($filePath, $defaultContents, LOCK_EX);
+			}
+			if (self::allowFileWriting()) {
+				@chmod($filePath, self::permissions());
+			}
 			$fileHandle = @fopen($filePath, 'r+');
-			$handle = $fileHandle;
+			if (!$fileHandle) {
+				throw new wfWAFStorageFileException('Unable to open ' . $filePath . ' for reading and writing.');
+			}
+			return;
 		}
-		
-		if (!$handle && $remakeIfCorrupt && wfWAFStorageFile::allowFileWriting()) {
-			@file_put_contents($filePath, $defaultContents, LOCK_EX);
-			@chmod($filePath, self::permissions());
-			if ($arrayKey !== false) {
-				$fileHandle[$arrayKey] = @fopen($filePath, 'r+');
-				$handle = $fileHandle[$arrayKey];
+
+		$failure = null;
+		$openPath = $filePath;
+		$handle = $this->openConfigFile($filePath, 'r+', $failure);
+		$backup = false;
+		if (!$handle && $arrayKey === 'synced') {
+			$backup = $this->latestReplacementBackup($filePath);
+			if ($backup !== false) {
+				$openPath = $backup;
+				$handle = $this->openConfigFile($backup, 'r+', $failure);
+				if (!$handle) {
+					// The writer may have installed the destination and removed this backup.
+					$openPath = $filePath;
+					$handle = $this->openConfigFile($filePath, 'r+', $failure);
+				}
+			}
+		}
+		$allowCreation = $this->configReadAttempt === null || $this->configReadAttempt === 2;
+		if (!$handle && $allowCreation && !$backup && !file_exists($filePath) && ($arrayKey !== '' || $this->freshInstallation)) {
+			$openPath = $filePath;
+			$handle = $this->openConfigFile($filePath, 'x+b', $failure);
+			if ($handle) {
+				$initialized = false;
+				try {
+					$offset = 0;
+					$length = strlen($defaultContents);
+					while ($offset < $length) {
+						$written = fwrite($handle, substr($defaultContents, $offset));
+						if (!$written) {
+							throw new wfWAFStorageFileConfigException('Unable to write default configuration.');
+						}
+						$offset += $written;
+					}
+					if (!fflush($handle) || !rewind($handle) || stream_get_contents($handle) !== $defaultContents) {
+						throw new wfWAFStorageFileConfigException('Unable to verify default configuration.');
+					}
+					$initialized = true;
+				}
+				finally {
+					if (!$initialized) {
+						self::closeOptionalHandle($handle, false);
+					}
+				}
 			}
 			else {
-				$fileHandle = @fopen($filePath, 'r+');
-				$handle = $fileHandle;
+				// Another writer may have installed the destination before exclusive creation.
+				$handle = $this->openConfigFile($filePath, 'r+', $failure);
 			}
 		}
-		
 		if (!$handle) {
-			throw new wfWAFStorageFileException('Unable to open ' . $filePath . ' for reading and writing.');
+			throw new wfWAFStorageFileException('Unable to open ' . $openPath . ' for reading and writing.', 0, $failure);
 		}
+		$fileHandle[$arrayKey] = $handle;
+		if (self::allowFileWriting()) {
+			try {
+				@chmod($openPath, self::permissions());
+			}
+			catch (Exception $e) {
+			}
+			catch (Throwable $e) {
+			}
+		}
+	}
+
+	/**
+	 * Open a configuration path while capturing native warnings as causes.
+	 *
+	 * @param string $path Configuration or backup path.
+	 * @param string $mode Open mode.
+	 * @param Exception|Throwable|null $failure Last opening exception, if any.
+	 * @return resource|false Open handle or failure.
+	 */
+	protected function openConfigFile($path, $mode, &$failure) {
+		try {
+			return wfWAFFileReadDiagnostics::capture('fopen', function () use ($path, $mode) {
+				return fopen($path, $mode);
+			});
+		}
+		catch (Exception $e) {
+			$failure = $e;
+		}
+		catch (Throwable $e) {
+			$failure = $e;
+		}
+		return false;
+	}
+
+	/**
+	 * Find the most recent backup while a replacement may have moved the destination.
+	 *
+	 * @param string $filePath Destination path.
+	 * @return string|false Backup path, if present.
+	 */
+	private function latestReplacementBackup($filePath) {
+		$backups = @glob($filePath . '.bak.*');
+		if (!$backups) {
+			return false;
+		}
+		$latest = false;
+		$latestTime = -1;
+		foreach ($backups as $backup) {
+			$modified = @filemtime($backup);
+			if ($modified !== false && $modified >= $latestTime) {
+				$latest = $backup;
+				$latestTime = $modified;
+			}
+		}
+		return $latest;
 	}
 
 	/**
@@ -581,7 +853,7 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 				)
 			) {
 				$this->dataChanged[$category] = array($key, true);
-				register_shutdown_function(array($this, 'saveConfig'), $category);
+				register_shutdown_function(array($this, 'saveConfigAtShutdown'), $category);
 			}
 			$this->data[$category][$key] = $value;
 		}
@@ -596,7 +868,7 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 		}
 		if (!isset($this->dataChanged[$category]) && is_array($this->data[$category]) && array_key_exists($key, $this->data[$category])) {
 			$this->dataChanged[$category] = array($key, true);
-			register_shutdown_function(array($this, 'saveConfig'), $category);
+			register_shutdown_function(array($this, 'saveConfigAtShutdown'), $category);
 		}
 		unset($this->data[$category][$key]);
 	}
@@ -605,32 +877,106 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 	 * @throws wfWAFStorageFileException
 	 */
 	public function fetchConfigData($category = '', $redoing = false) {
-		unset($this->configFileHandles[$category]);
-		$this->open($category);
-		self::lock($this->configFileHandles[$category], LOCK_SH);
-		$i = 0;
-		// Attempt to read contents of the config file. This could be in the middle of a write, so we account for it and
-		// wait for the operation to complete.
-		fseek($this->configFileHandles[$category], wfWAFUtils::strlen(self::LOG_FILE_HEADER), SEEK_SET);
-		$serializedData = '';
-		while (!feof($this->configFileHandles[$category])) {
-			$serializedData .= fread($this->configFileHandles[$category], 1024);
-		}
-		if (wfWAFUtils::substr($serializedData, 0, 1) == '*') {
-			$serializedData = wfWAFUtils::substr($serializedData, wfWAFUtils::strlen(self::LOG_INFO_HEADER));
-		}
-		$this->data[$category] = @unserialize($serializedData);
-
-		if ($this->data[$category] === false) {
-			if (!empty($category) && !$redoing) {
-				$this->regenerateConfigFile($category);
-				$this->fetchConfigData($category, true);
-				return;
+		$component = 'storage-' . ($category === '' ? 'main' : preg_replace('/[^a-zA-Z0-9_-]/', '', substr($category, 0, 40)));
+		$previousAttempt = $this->configReadAttempt;
+		$failure = null;
+		try {
+			for ($attempt = 0; $attempt < 3; $attempt++) {
+				$this->configReadAttempt = $attempt;
+				if ($attempt > 0) {
+					clearstatcache(true, $this->pathForConfig($category));
+					usleep($attempt * 10000);
+				}
+				$handle = false;
+				$locked = false;
+				$complete = false;
+				try {
+					if (isset($this->configFileHandles[$category]) && is_resource($this->configFileHandles[$category])) {
+						self::closeOptionalHandle($this->configFileHandles[$category], false);
+					}
+					unset($this->configFileHandles[$category]);
+					$this->open($category);
+					$handle = $this->configFileHandles[$category];
+					$locked = self::optionalLock($handle, LOCK_SH);
+					$position = wfWAFFileReadDiagnostics::capture('fseek', function () use ($handle) {
+						return fseek($handle, strlen(self::LOG_FILE_HEADER), SEEK_SET);
+					});
+					if ($position !== 0) {
+						throw new wfWAFStorageFileConfigException('Unable to seek WAF configuration.');
+					}
+					$serializedData = wfWAFFileReadDiagnostics::capture('stream_get_contents', function () use ($handle) {
+						return stream_get_contents($handle);
+					});
+					if ($serializedData === false) {
+						throw new wfWAFStorageFileConfigException('Unable to read WAF configuration.');
+					}
+					if (substr($serializedData, 0, 1) === '*') {
+						$serializedData = substr($serializedData, strlen(self::LOG_INFO_HEADER));
+					}
+					$data = wfWAFFileReadDiagnostics::capture('unserialize', function () use ($serializedData) {
+						return unserialize($serializedData);
+					});
+					if (!is_array($data)) {
+						throw new wfWAFStorageFileConfigException('Invalid WAF configuration container.');
+					}
+					$this->data[$category] = $data;
+					$complete = true;
+					wfWAFRuntimeHealth::complete($component);
+					return;
+				}
+				catch (Exception $e) {
+					$failure = $e;
+				}
+				catch (Throwable $e) {
+					$failure = $e;
+				}
+				finally {
+					if ($locked && is_resource($handle)) {
+						self::optionalLock($handle, LOCK_UN);
+					}
+					if (!$complete && isset($this->configFileHandles[$category])) {
+						if (is_resource($this->configFileHandles[$category])) {
+							self::closeOptionalHandle($this->configFileHandles[$category], false);
+						}
+						unset($this->configFileHandles[$category]);
+					}
+				}
 			}
-			throw new wfWAFStorageFileConfigException('Error reading Wordfence Firewall config data, configuration file could be corrupted or inaccessible. Path: ' . $this->pathForConfig($category));
+			wfWAFRuntimeHealth::failure($component, 'configuration-unreadable', $failure);
+			wfWAFFileReadDiagnostics::report($this->pathForConfig($category), 'configuration read or decode', 'WAF configuration could not be read or decoded.', $failure);
+			throw new wfWAFStorageFileConfigException('Unable to decode WAF configuration.', 0, $failure);
 		}
+		finally {
+			$this->configReadAttempt = $previousAttempt;
+		}
+	}
 
-		self::lock($this->configFileHandles[$category], LOCK_UN);
+	/**
+	 * Identify the configuration category whose write must be revalidated.
+	 *
+	 * @param string $category Category.
+	 * @return string Health component.
+	 */
+	private function writeHealthComponent($category) {
+		return 'storage-write-' . ($category === '' ? 'main' : preg_replace('/[^a-zA-Z0-9_-]/', '', substr($category, 0, 40)));
+	}
+
+	/**
+	 * Save one category without preventing unrelated shutdown callbacks.
+	 *
+	 * @param string $category Category.
+	 * @return void
+	 */
+	public function saveConfigAtShutdown($category = '') {
+		try {
+			$this->saveConfig($category);
+		}
+		catch (Exception $e) {
+			wfWAFRuntimeHealth::failure($this->writeHealthComponent($category), 'shutdown-save-failed', $e, false);
+		}
+		catch (Throwable $e) {
+			wfWAFRuntimeHealth::failure($this->writeHealthComponent($category), 'shutdown-save-failed', $e, false);
+		}
 	}
 
 	/**
@@ -650,17 +996,12 @@ class wfWAFStorageFile implements wfWAFStorageInterface {
 			return;
 		}
 
-		if (WFWAF_IS_WINDOWS) {
-			self::lock($this->configFileHandles[$category], LOCK_UN);
+		if (WFWAF_IS_WINDOWS && isset($this->configFileHandles[$category])) {
 			fclose($this->configFileHandles[$category]);
-			file_put_contents($this->pathForConfig($category), self::LOG_FILE_HEADER . self::LOG_INFO_HEADER . serialize($this->data[$category]), LOCK_EX);
-		} else {
-			wfWAFStorageFile::atomicFilePutContents($this->pathForConfig($category), self::LOG_FILE_HEADER . self::LOG_INFO_HEADER . serialize($this->data[$category]));
+			unset($this->configFileHandles[$category]);
 		}
-
-		if (WFWAF_IS_WINDOWS) {
-			$this->configFileHandles[$category] = fopen($this->pathForConfig($category), 'r+');
-		}
+		wfWAFStorageFile::atomicFilePutContents($this->pathForConfig($category), self::LOG_FILE_HEADER . self::LOG_INFO_HEADER . serialize($this->data[$category]));
+		wfWAFRuntimeHealth::complete($this->writeHealthComponent($category));
 	}
 
 	/**

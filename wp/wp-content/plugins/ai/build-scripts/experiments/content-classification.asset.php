@@ -9,11 +9,12 @@
 		'wp-editor',
 		'wp-element',
 		'wp-hooks',
+		'wp-html-entities',
 		'wp-i18n',
 		'wp-notices',
 		'wp-primitives',
 		'wp-url',
 		'wp-wordcount'
 	),
-	'version' => '507b20c9ec122b97443c'
+	'version' => '54ab2e8448c2fac3d1e5'
 );

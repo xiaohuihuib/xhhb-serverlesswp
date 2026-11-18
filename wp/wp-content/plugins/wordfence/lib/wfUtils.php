@@ -1271,7 +1271,7 @@ class wfUtils {
 					$sp = explode($char, $item);
 					$sp = array_reverse($sp);
 					foreach($sp as $j){
-						$j = trim($j);
+						$j = trim($j, " \t\n\r\0\x0B\x0C");
 						if (!self::isValidIP($j)) {
 							$j = preg_replace('/:\d+$/', '', $j); //Strip off port
 						}
@@ -1347,7 +1347,7 @@ class wfUtils {
 					$sp = explode($char, $item);
 					$sp = array_reverse($sp);
 					foreach($sp as $index => $j){
-						$j = trim($j);
+						$j = trim($j, " \t\n\r\0\x0B\x0C");
 						if (!self::isValidIP($j)) {
 							$j = preg_replace('/:\d+$/', '', $j); //Strip off port
 						}

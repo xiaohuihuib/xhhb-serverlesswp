@@ -16,5 +16,5 @@
 		'wp-url',
 		'wp-wordcount'
 	),
-	'version' => 'c6d654d2de4946a98c4e'
+	'version' => '50875025fb9707688ee3'
 );

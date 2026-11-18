@@ -150,6 +150,11 @@ $modalTemplateID = $instanceID . '-disable-prompt-template';
 						setBusy(false);
 						updateChoiceState(previousState);
 						WFLS.standaloneModal('<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('Error Updating Passkey Options', 'wordfence')); ?>', '<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('An error was encountered while trying to save the user-specific passkey options. Please try again.', 'wordfence')); ?>');
+					},
+					false,
+					function() {
+						setBusy(false);
+						updateChoiceState(previousState);
 					}
 				);
 			}

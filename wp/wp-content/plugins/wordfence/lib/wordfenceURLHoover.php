@@ -568,27 +568,47 @@ class wordfenceURLHoover {
 		return implode('.', $strings);
 	}
 	
+	/**
+	 * Converts an IPv4 component to bytes without overflowing native integers.
+	 *
+	 * @param string $part Decimal, hexadecimal, or octal component.
+	 * @param int $n Number of bytes available to the component.
+	 * @return string Dotted bytes, or an empty string for an oversized component.
+	 */
 	protected function _canonicalNum($part, $n) {
 		if ($n <= 0 || $n > 4) {
 			return '';
 		}
 		
-		if (preg_match('/^0x(\d+)$/i', $part, $matches)) { //hex
-			$part = hexdec($matches[1]);
+		if (preg_match('/^0x([0-9a-f]+)$/i', $part, $matches)) {
+			$digits = strtolower($matches[1]);
+			$base = 16;
 		}
-		else if (preg_match('/^0(\d+)$/i', $part, $matches)) { //octal
-			$part = octdec($matches[1]);
+		else if (preg_match('/^0([0-7]+)$/', $part, $matches)) {
+			$digits = $matches[1];
+			$base = 8;
 		}
 		else {
-			$part = (int) $part;
+			if (!preg_match('/^[0-9]+$/D', $part) || (strlen($part) > 1 && $part[0] === '0' && strpbrk($part, '89') !== false)) {
+				return '';
+			}
+			$digits = $part;
+			$base = 10;
 		}
 		
-		$strings = array_fill(0, $n, '');
-		for ($i = $n - 1; $i >= 0; $i--) {
-			$strings[$i] = (string) ($part & 0xff);
-			$part = $part >> 8;
+		$bytes = array_fill(0, $n, 0);
+		for ($offset = 0, $length = strlen($digits); $offset < $length; $offset++) {
+			$carry = strpos('0123456789abcdef', $digits[$offset]);
+			for ($i = $n - 1; $i >= 0; $i--) {
+				$value = $bytes[$i] * $base + $carry;
+				$bytes[$i] = $value & 0xff;
+				$carry = $value >> 8;
+			}
+			if ($carry !== 0) {
+				return '';
+			}
 		}
-		return implode('.', $strings);
+		return implode('.', $bytes);
 	}
 	
 	/**
