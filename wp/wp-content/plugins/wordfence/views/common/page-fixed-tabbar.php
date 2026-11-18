@@ -4,9 +4,11 @@ if (!defined('WORDFENCE_VERSION')) { exit; }
  * Expects $tabs to be defined as an array of wfTab instances
  */
 ?>
+<div class="wrap wordfence wf-page-notices">
+	<div class="wp-header-end"></div>
+</div>
 <div class="wf-tab-container">
 	<div class="wf-col-xs-12">
-		<div class="wp-header-end"></div>
 		<ul class="wf-hidden-xs wf-page-fixed-tabs" role="tablist">
 			<li class="wordfence-lock-icon wordfence-icon32"></li>
 			<?php foreach ($tabs as $t): ?>

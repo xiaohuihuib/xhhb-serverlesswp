@@ -5,7 +5,7 @@ namespace WordfenceLS;
 use WordfenceLS\Crypto\Model_JWT;
 
 class Controller_REST {
-	const NAMESPACE = 'wordfence-login-security/v1';
+	const REST_NAMESPACE = 'wordfence-login-security/v1';
 	const ROUTE_INTERNAL_PASSKEY_LOGIN_BEGIN = '/internal/passkey-login/begin';
 	const ROUTE_INTERNAL_PASSKEY_LOGIN_FINISH = '/internal/passkey-login/finish';
 	const ROUTE_PASSKEY_MANAGEMENT_STATUS = '/passkeys';
@@ -51,10 +51,10 @@ class Controller_REST {
 			'methods' => $creatable,
 			'permission_callback' => array($this, '_internal_permission_callback'),
 		);
-		register_rest_route(self::NAMESPACE, self::ROUTE_INTERNAL_PASSKEY_LOGIN_BEGIN, $internalRoute + array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_INTERNAL_PASSKEY_LOGIN_BEGIN, $internalRoute + array(
 			'callback' => array($this, '_begin_passkey_login_callback'),
 		));
-		register_rest_route(self::NAMESPACE, self::ROUTE_INTERNAL_PASSKEY_LOGIN_FINISH, $internalRoute + array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_INTERNAL_PASSKEY_LOGIN_FINISH, $internalRoute + array(
 			'callback' => array($this, '_finish_passkey_login_callback'),
 		));
 
@@ -66,23 +66,23 @@ class Controller_REST {
 			'methods' => $creatable,
 			'permission_callback' => array($this, '_passkey_management_permission_callback'),
 		);
-		register_rest_route(self::NAMESPACE, self::ROUTE_PASSKEY_MANAGEMENT_STATUS, array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_PASSKEY_MANAGEMENT_STATUS, array(
 			'methods' => 'GET',
 			'permission_callback' => array($this, '_passkey_management_permission_callback'),
 			'callback' => array($this, '_passkey_management_status_callback'),
 		));
-		register_rest_route(self::NAMESPACE, self::ROUTE_PASSKEY_REGISTRATION_BEGIN, $managementRoute + array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_PASSKEY_REGISTRATION_BEGIN, $managementRoute + array(
 			'callback' => array($this, '_begin_passkey_registration_callback'),
 		));
-		register_rest_route(self::NAMESPACE, self::ROUTE_PASSKEY_REGISTRATION_FINISH, $managementRoute + array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_PASSKEY_REGISTRATION_FINISH, $managementRoute + array(
 			'callback' => array($this, '_finish_passkey_registration_callback'),
 		));
-		register_rest_route(self::NAMESPACE, self::ROUTE_PASSKEY_REMOVE, array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_PASSKEY_REMOVE, array(
 			'methods' => 'DELETE',
 			'permission_callback' => array($this, '_passkey_management_permission_callback'),
 			'callback' => array($this, '_remove_passkey_callback'),
 		));
-		register_rest_route(self::NAMESPACE, self::ROUTE_PASSKEY_PASSWORD_AUTH, array(
+		register_rest_route(self::REST_NAMESPACE, self::ROUTE_PASSKEY_PASSWORD_AUTH, array(
 			'methods' => 'PATCH',
 			'permission_callback' => array($this, '_passkey_management_permission_callback'),
 			'callback' => array($this, '_set_passkey_password_auth_callback'),

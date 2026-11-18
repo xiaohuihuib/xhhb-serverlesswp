@@ -257,6 +257,10 @@ $addIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('plus', $uiStyl
 									function() {
 										setBusy(false);
 										WFLS.standaloneModal('<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('Error Adding Passkey', 'wordfence')); ?>', '<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('An error was encountered while trying to save the new passkey. Please try again.', 'wordfence')); ?>');
+									},
+									false,
+									function() {
+										setBusy(false);
 									}
 								);
 							}).catch(function(error) {
@@ -270,6 +274,10 @@ $addIconClass = \WordfenceLS\Utility_Style::font_awesome_classes('plus', $uiStyl
 						function() {
 							setBusy(false);
 							WFLS.standaloneModal('<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('Error Starting Passkey Registration', 'wordfence')); ?>', '<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('An error was encountered while trying to start passkey registration. Please try again.', 'wordfence')); ?>');
+						},
+						false,
+						function() {
+							setBusy(false);
 						}
 					);
 				});

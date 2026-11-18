@@ -135,6 +135,17 @@ class Controller_WordfenceLS {
 	}
 	
 	public function _admin_init() {
+		if (isset($_GET['wfls_recaptcha_validation_frame'])) {
+			$nonce = isset($_GET['wfls_recaptcha_validation_nonce']) && is_string($_GET['wfls_recaptcha_validation_nonce']) ? $_GET['wfls_recaptcha_validation_nonce'] : '';
+			if (!current_user_can(Controller_Permissions::CAP_MANAGE_SETTINGS) || !wp_verify_nonce($nonce, 'wp-ajax')) {
+				status_header(403);
+				exit;
+			}
+			header('Content-Type: text/html; charset=utf-8');
+			header('Cache-Control: no-store');
+			echo '<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>';
+			exit;
+		}
 		if (WORDFENCE_LS_FROM_CORE) {
 			\wfModuleController::shared()->addOptionIndex('wfls-option-enable-2fa-roles', __('Login Security: Enable 2FA for these roles', 'wordfence'));
 			\wfModuleController::shared()->addOptionIndex('wfls-option-enable-passkey-roles', __('Login Security: Enable Passkeys for these roles', 'wordfence'));
@@ -324,7 +335,7 @@ END
 				continue;
 			}
 
-			$host = strtolower(rtrim(trim($context['host']), '.'));
+			$host = strtolower(rtrim(trim($context['host'], " \t\n\r\0\x0B\x0C"), '.'));
 			if ($host === '') {
 				continue;
 			}

@@ -4,6 +4,17 @@ if (defined('WFWAF_VERSION') && !defined('WFWAF_RUN_COMPLETE')) {
 class wfWAFUtils {
 
 	/**
+	 * Parses form data while retaining literal NULs and subsequent parameters.
+	 *
+	 * @param string $string Encoded query, cookie, or form data.
+	 * @return array Parsed parameters.
+	 */
+	public static function parseQueryString($string) {
+		parse_str(str_replace("\0", '%00', $string), $result);
+		return $result;
+	}
+
+	/**
 	 * Return dot or colon notation of IPv4 or IPv6 address.
 	 *
 	 * @param string $ip

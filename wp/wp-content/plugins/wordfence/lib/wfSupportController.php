@@ -452,7 +452,7 @@ class wfSupportController {
 	
 	public static function satisfactionPromptNotice() {
 ?>
-		<div id="wordfenceSatisfactionPrompt" class="fade notice notice-info">
+		<div id="wordfenceSatisfactionPrompt" class="fade notice notice-info is-dismissible">
 			<p id="wordfenceSatisfactionPrompt-initial"><strong><?php printf(__('Are you enjoying using Wordfence Security?', 'wordfence')); ?></strong>&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.wordfenceSatisfactionChoice('yes'); return false;" class="wf-btn wf-btn-default wf-btn-sm" role="button"><?php printf(__('Yes', 'wordfence')); ?></a>&nbsp;&nbsp;&nbsp;<a href="#" onclick="WFAD.wordfenceSatisfactionChoice('no'); return false;" class="wf-btn wf-btn-default wf-btn-sm" role="button"><?php printf(__('No', 'wordfence')); ?></a></p>
 			<div id="wordfenceSatisfactionPrompt-yes" style="display: none;">
 				<p><?php printf(__('Please consider leaving us a 5-star review on wordpress.org. Your review helps other members of the WordPress community find plugins that fit their needs.', 'wordfence')); ?></p>

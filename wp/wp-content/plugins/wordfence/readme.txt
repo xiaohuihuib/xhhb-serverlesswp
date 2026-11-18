@@ -4,7 +4,7 @@ Tags: security, malware, 2fa, firewall, scanner
 Requires at least: 4.7
 Requires PHP: 7.0
 Tested up to: 7.1
-Stable tag: 9.0.2
+Stable tag: 9.1.1
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -207,6 +207,35 @@ Secure your website with Wordfence.
 9. Logging in is easy with Wordfence 2FA.
 
 == Changelog ==
+
+= 9.1.1 - November 10, 2026 =
+* Improvement: Updated bundled cacert.pem
+
+= 9.1.0 - November 9, 2026 =
+* Improvement: Added security news widget to the WordPress and Wordfence dashboards
+* Improvement: Increased frequency of WAF rule update checks
+* Improvement: Added Live Traffic logging for application password and REST API authentication failures
+* Improvement: Added controls for the WAF attack alert threshold and counting window
+* Improvement: Improved attack data synchronization to reduce overhead and avoid cache issues
+* Improvement: Improved SQL injection parsing and detection for malformed input
+* Improvement: Improved malware scanning handling of uploads
+* Improvement: Improved WAF execution and configuration handling in unexpected hosting configurations or unreliable network environments
+* Improvement: Updated GeoIP database
+* Change: Matched WAF inspection of form request bodies to the same method overrides as WordPress
+* Change: Better 2FA recovery code validation
+* Change: Adjusted audit log request data handling and limits
+* Change: Better handling of PHP diagnostic output during WAF execution
+* Change: Corrected JavaScript element lookups in the plugin UI
+* Change: Revalidate reCAPTCHA keys on save and improved recovery from browser errors
+* Fix: PHP 8.6 compatibility fixes
+* Fix: Better validation of cached real-time IP blocklist data
+* Fix: Improved WAF compatibility with hosts that disable ini_set
+* Fix: Improved WAF handling of nested request arrays
+* Fix: The scan activity log now uses the site's timezone and displays the UTC offset
+* Fix: Improved handling of canceled requests to avoid unnecessary errors and stuck controls
+* Fix: Fixed the layout and dismissal of the satisfaction survey notice
+* Fix: Corrected Live Traffic descriptions for requests without a referrer
+* Fix: Prevented passkey availability checks from causing errors when database setup is incomplete or broken
 
 = 9.0.2 - September 30, 2026 =
 * Change: Changed IPv6 diagnostics result to be informational only

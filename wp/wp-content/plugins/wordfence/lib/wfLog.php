@@ -2,6 +2,7 @@
 require_once(dirname(__FILE__) . '/wfDB.php');
 require_once(dirname(__FILE__) . '/wfUtils.php');
 require_once(dirname(__FILE__) . '/wfBrowscap.php');
+require_once(dirname(__FILE__) . '/wfAuthenticationLog.php');
 class wfLog {
 	public $canLogHit = true;
 	private $effectiveUserID = 0;
@@ -17,6 +18,7 @@ class wfLog {
 	 * @var wfRequestModel
 	 */
 	private $currentRequest;
+	private $authenticationLog;
 	
 	public static function shared() {
 		static $_shared = null;
@@ -94,9 +96,31 @@ class wfLog {
 		$this->loginsTable = wfDB::networkTable('wfLogins');
 		$this->statusTable = wfDB::networkTable('wfStatus');
 		
+		$this->authenticationLog = new wfAuthenticationLog();
 		add_filter('determine_current_user', array($this, '_userIDDetermined'), 99, 1);
+		add_filter('rest_pre_serve_request', array($this, 'recordRestResponseStatus'), PHP_INT_MAX, 4);
 	}
 	
+	/** @return wfAuthenticationLog Authentication event collector for this request. */
+	public function getAuthenticationLog() {
+		return $this->authenticationLog;
+	}
+
+	/**
+	 * Captures the final outer REST response status before request persistence.
+	 * @param bool $served Whether another handler already served the response.
+	 * @param WP_REST_Response $response Final response, including any envelope.
+	 * @param WP_REST_Request $request Served REST request.
+	 * @param WP_REST_Server $server REST server.
+	 * @return bool Unchanged serving decision.
+	 */
+	public function recordRestResponseStatus($served, $response, $request, $server) {
+		if ($this->currentRequest !== null) {
+			$this->currentRequest->statusCode = $response->get_status();
+		}
+		return $served;
+	}
+
 	public function _userIDDetermined($userID) {
 		//Needed because the REST API will clear the authenticated user if it fails a nonce check on the request
 		$this->effectiveUserID = (int) $userID;
@@ -249,6 +273,8 @@ class wfLog {
 	 * @return bool|int
 	 */
 	public function logHit() {
+		if ($this->currentRequest === null) { return false; }
+		$this->authenticationLog->annotateRequest($this->currentRequest);
 		$liveTrafficEnabled = wfConfig::liveTrafficEnabled();
 		$action = $this->currentRequest->action;
 		$logHitOK = $this->logHitOK();
@@ -796,6 +822,7 @@ class wfLog {
 			$rec['ctime'] = (float) $rec['ctime'];
 			$rec['level'] = (int) $rec['level'];
 			$rec['date'] = date('M d H:i:s', (int) $rec['ctime'] + $timeOffset);
+			$rec['timestampDisplay'] = wfUtils::formatLocalTime('M d H:i:s P', $rec['ctime']);
 			$rec['msg'] = wp_kses_data( (string) $rec['msg']);
 		}
 		return $results;
@@ -1771,7 +1798,7 @@ class wfLiveTrafficQueryFilterCollection {
 		if ($filters) {
 			/** @var wfLiveTrafficQueryFilter $filter */
 			foreach ($filters as $filter) {
-				$params[$filter->getParam()][] = $filter;
+				$params[$filter->getGroup() . ':' . $filter->getParam()][] = $filter;
 			}
 		}
 
@@ -1818,6 +1845,7 @@ class wfLiveTrafficQueryFilter {
 	private $param;
 	private $operator;
 	private $value;
+	private $group;
 
 	protected $validOperators = array(
 		'=',
@@ -1842,12 +1870,19 @@ class wfLiveTrafficQueryFilter {
 	 * @param string $param
 	 * @param string $operator
 	 * @param string $value
+	 * @param string|null $group Optional logical group; invalid identifiers use legacy grouping.
 	 */
-	public function __construct($query, $param, $operator, $value) {
+	public function __construct($query, $param, $operator, $value, $group = null) {
 		$this->query = $query;
 		$this->param = $param;
 		$this->operator = $operator;
 		$this->value = $value;
+		$this->group = is_string($group) && preg_match('/^[a-zA-Z0-9_.:-]{1,100}$/D', $group) ? $group : '';
+	}
+
+	/** @return string Validated logical group, empty for legacy parameter grouping. */
+	public function getGroup() {
+		return $this->group;
 	}
 
 	/**

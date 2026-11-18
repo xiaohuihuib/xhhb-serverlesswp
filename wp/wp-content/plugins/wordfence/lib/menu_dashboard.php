@@ -73,6 +73,13 @@ $d = new wfDashboard();
 				</div>
 			</div>
 		</div>
+		<?php if (wfSecurityNews::enabled('wf')): ?>
+		<div class="wf-row">
+			<div class="wf-col-xs-12">
+				<?php wfSecurityNews::render('wf'); ?>
+			</div>
+		</div>
+		<?php endif; ?>
 		<div class="wf-row">
 			<div class="wf-col-xs-12 wf-col-lg-6 wf-col-lg-half-padding-right">
 				<!-- begin firewall summary site -->

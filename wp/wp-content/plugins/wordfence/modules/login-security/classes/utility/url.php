@@ -458,7 +458,7 @@ class Utility_URL {
 		}
 
 		$data = array_filter(array_map(function($suffix) {
-			return is_string($suffix) ? trim($suffix) : '';
+			return is_string($suffix) ? trim($suffix, " \t\n\r\0\x0B\x0C") : '';
 		}, $data));
 		$data = array_map(function($suffix) {
 			return strtolower(preg_quote($suffix));
@@ -551,7 +551,7 @@ class Utility_URL {
 			return '';
 		}
 
-		$url = trim($url);
+		$url = trim($url, " \t\n\r\0\x0B\x0C");
 		if ($url === '') {
 			return '';
 		}
@@ -661,7 +661,7 @@ class Utility_URL {
 		if (!is_string($host)) {
 			return '';
 		}
-		return strtolower(rtrim(trim($host), '.'));
+		return strtolower(rtrim(trim($host, " \t\n\r\0\x0B\x0C"), '.'));
 	}
 
 	/**

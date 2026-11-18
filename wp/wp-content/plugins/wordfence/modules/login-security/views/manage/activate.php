@@ -127,6 +127,10 @@ $recovery = $initializationData->get_recovery_codes();
 					function(error) {
 						WFLS.standaloneModal('<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('Error Activating 2FA', 'wordfence')); ?>', '<?php echo \WordfenceLS\Text\Model_JavaScript::esc_js(__('An error was encountered while trying to activate two-factor authentication. Please try again.', 'wordfence')); ?>');
 						WFLS.userIsActivating = false;
+					},
+					false,
+					function() {
+						WFLS.userIsActivating = false;
 					}
 				);
 			});
